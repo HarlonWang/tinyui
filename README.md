@@ -1,6 +1,6 @@
 # TinyUI
 
-JS 写声明式组件、Compose Multiplatform 渲染的动态化 UI 框架，引擎为 [MicroQuickJS](https://github.com/HarlonWang/mquickjs-kmp)。Android / iOS 双端，页面可热下发。
+JS 写声明式组件、Compose Multiplatform 渲染的动态化 UI 框架，引擎为 [mquickjs-kmp](https://github.com/HarlonWang/mquickjs-kmp)。Android / iOS 双端，页面可热下发。
 
 > 设计阶段。关键选型已定，代码尚未开始；进度见 [docs/roadmap.md](./docs/roadmap.md)。
 
