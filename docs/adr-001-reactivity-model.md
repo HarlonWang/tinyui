@@ -6,7 +6,12 @@
 
 ## 1. 背景
 
-> **2026-09-15 修订（ADR-005）**：本文写作时引擎为 MicroQuickJS（ES5 子集、无 Proxy、固定堆）。引擎已切换为 QuickJS（ES2025），下文所有"无 Proxy / ES5 / 固定堆"的论证均为历史背景。核心决策（运行时 Signal、所有权 / 清理、For / Show）不受影响，bench 在 QuickJS 上的复跑见 ADR-005 §3.1。受影响的具体点：Promise polyfill 与"已 settled 同步续行"作废（微任务原生）；`async/await` 原生；"Proxy store"进入待定；§3.7 中"固定堆上必漏"的措辞在 QuickJS 下改为"内存慢涨"，所有权机制本身不变。
+> **2026-09-15 修订（ADR-005）**：本文写作时引擎为 MicroQuickJS（ES5 子集、无 Proxy、固定堆）。引擎已切换为 QuickJS（ES2025），下文所有"无 Proxy / ES5 / 固定堆"的论证均为历史背景。核心决策（运行时 Signal、所有权 / 清理、For / Show）不受影响，bench 在 QuickJS 上的复跑见 ADR-005 §3.1。逐条复盘后的结论：
+> - **thunk 写法改由编译器生成（v1）**：`text={() => ...}` 与 `count()` 是"没有编译器"的代价，不是引擎的；CLI 不再背 ES5 降级后有余地做 Solid 式变换——JSX 表达式含调用 / 属性访问即自动包成 getter，业务写 `text={"Count: " + count()}`。运行时接口不变，仍接收 thunk
+> - **`createStore`（Proxy 深层响应式）v1 不做、v1.1 做**：v1 保持"数组 / 对象整体替换"，先用整体替换跑通 M1 / M2，避免运行时一上来背 Proxy 追踪的复杂度
+> - **`createResource` 进 v1，并明确"组件函数必须同步"**：QuickJS 有原生 `async`，业务会想写 `async function Page()`，`await` 之后创建的 effect 落在同步渲染期外会触发 §3.7 的抛错。数据获取走 `createResource(fetcher)`：同步期建好 signal 与绑定，异步期只写 signal
+> - Promise polyfill 与"已 settled 同步续行"作废，微任务原生，每次宿主调用返回前排空
+> - §3.7 中"固定堆上必漏"改为"无 owner 的 effect 永远不会被清理"，抛错的结论不变（Angular 同样抛错）
 
 
 业务侧写声明式组件已定（见 [README](./README.md)），要定的是两件事：**状态变了之后 JS 侧怎么知道该更新什么**，以及**"vdom diff"放不放、放在哪**。这两件事决定桥的粒度、JS 侧的内存形态、以及要不要写编译器。

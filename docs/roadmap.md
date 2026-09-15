@@ -24,7 +24,8 @@
 
 | 项 | 来源 | 状态 |
 |---|---|---|
-| JS 运行时 API：`signal` / `memo` / `effect` / `onCleanup` / `For` / `Show` / `ref` + `cmd`；J3 / K3 用原生 Promise | ADR-001 / 004 / 005 | 待开 |
+| JS 运行时 API：`signal` / `memo` / `effect` / `onCleanup` / `For` / `Show` / `ref` + `cmd` / **`createResource`**；"组件函数必须同步"规则；J3 / K3 用原生 Promise | ADR-001 / 004 / 005 | 待开 |
+| CLI 的 JSX 变换：自动 thunk（Solid 式 getter 包裹）、source map 输出 | ADR-005 | 待开 |
 | patch 协议：六种 op、JSON 形态、是否带协议版本号 | ADR-001 / 002 / 004 | 待开 |
 | schema DSL 形态 + 由 schema 生成 TS 类型定义的工具链 | ADR-003 | 待开 |
 | 公共布局 prop 清单与 `Modifier` 合成顺序 | ADR-003 | 待开 |
@@ -37,8 +38,7 @@
 
 | 项 | 来源 | 触发条件 |
 |---|---|---|
-| 编译器抹掉 `count()` 与 thunk 语法 | ADR-001 | 业务反馈写法负担大，或要贴 TC39 Signals |
-| Proxy store（Solid `createStore` 式深层响应式） | ADR-005 | 业务对"数组 / 对象整体替换"反馈负担大 |
+| `createStore`（Solid 式 Proxy 深层响应式） | ADR-005 | **v1.1 计划内**：M2 列表页跑通后做 |
 | 热下发（Kotlin 回调式 module loader、页面包分发与版本兼容） | ADR-005 | 内核稳定后另立 ADR |
 | 向 bellard/mquickjs 上报 S4 段错误 | ADR-005 §3.2 | 用户决定 |
 | `ErrorBoundary` 分支级兜底 | ADR-002 | 整页失败的比例成为问题 |

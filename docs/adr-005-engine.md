@@ -71,7 +71,10 @@ Lynx、Kuikly、Weex 2 三个头部动态化框架独立选择了 QuickJS（或�
 | 接入 | 新建 **quickjs-kmp**（`wang.harlon:quickjs-kmp`，包 `wang.harlon.quickjs`），复制 mquickjs-kmp 的骨架，Kotlin 公共 API 与之同形；实现思路见 quickjs-kmp 仓 `docs/` |
 | 语言目标 | **ES2025**，CLI 只做 TS 擦除与 JSX → `h()`，不降级 |
 | 模块 | **原生 ESM 必选**：运行时（`@tiny-ui/core` / `@tiny-ui/native`）与页面都是模块字节码；引擎侧"名字 → 预编译模块"表，CLI 保证模块图里只剩表内的裸说明符（业务内部 import 构建期合并进页面模块，`external: ["@tiny-ui/*"]`） |
-| 页面加载 | 每页一 Runtime（ADR-002 不变）：注册运行时模块 → 求值页面模块（Promise，排空微任务）→ 调 `default` 导出挂载；页面模块允许顶层 `await`，不鼓励在顶层做网络请求 |
+| 页面加载 | 每页一 Runtime（ADR-002 不变）：注册运行时模块 → 求值页面模块（Promise，排空微任务）→ 调 `default` 导出挂载；页面模块允许顶层 `await`，但只用于同步依赖（等运行时初始化之类），数据获取走 `createResource` |
+| 运行时 API 调整（复盘 ADR-001） | 编译器自动 thunk（v1）；`createResource` + "组件函数必须同步"（v1）；`createStore` v1.1 |
+| 错误分类调整（复盘 ADR-002） | 新增 E7 未处理 Promise rejection；E6 增加栈溢出 |
+| source map | CLI 输出 source map，E1 / E2 上报的行列号映射回 TSX 源；ES5 降级时代不可行，现在只是转译 |
 | 模块名 | 即说明符：`@tiny-ui/core`、`pages/home`，无后缀无路径前缀；`import.meta.url` 为 `tinyui:pages/home` |
 | 热下发 | **不在本期**；本期字节码全部内置 App。Kotlin 回调式 loader（动态取源码）留给热下发那一期 |
 | mquickjs-kmp | 独立 SDK 继续存在，与 TinyUI 无关；不做"低端档位"抽象 |
