@@ -1,6 +1,6 @@
 # bench
 
-在 MicroQuickJS 上对比 UI 响应式更新模型的 CPU 与内存开销，是 [ADR-001](../docs/adr-001-reactivity-model.md) 的数据来源。
+对比 UI 响应式更新模型的 CPU 与内存开销（[ADR-001](../docs/adr-001-reactivity-model.md) 的数据来源），并在 MicroQuickJS 与 QuickJS 之间对比引擎（[ADR-005](../docs/adr-005-engine.md)）。脚本为纯 ES5，两个引擎都能跑。
 
 | 模型 | 文件 | 机制 |
 |---|---|---|
@@ -14,13 +14,19 @@
 
 ## 运行
 
-引擎来自 mquickjs-kmp 仓的上游副本（默认 `~/KMPProjects/mquickjs-kmp`，可用 `MQUICKJS_KMP_DIR` 覆盖），编进本目录的 `.engine/`（gitignored），只打一个补丁 `engine.patch`（`performance.now` 亚毫秒精度）：
+三个引擎构建，都编进本目录的 `.engine*/`（gitignored）：
+
+| 名称 | 来源 | 构建 |
+|---|---|---|
+| `mqjs-Os` | mquickjs-kmp 仓的上游副本（默认 `~/KMPProjects/mquickjs-kmp`，`MQUICKJS_KMP_DIR` 覆盖），打 `engine.patch`（`performance.now` 亚毫秒精度） | `bench/build-engine.sh` → `.engine/` |
+| `mqjs-O2` | 同上，`make CONFIG_SMALL=` | 手动：`cp -R .engine .engine-o2 && (cd .engine-o2 && make clean && make CONFIG_SMALL= mqjs)` |
+| `qjs` | `git clone --depth 1 https://github.com/bellard/quickjs.git .engine-qjs && (cd .engine-qjs && make qjs)`，自带 `performance.now` 与 `--std` 下的 `std.gc()` | `.engine-qjs/` |
 
 ```sh
-bench/build-engine.sh
-python3 bench/run.py          # 结果写到 bench/results/<时间戳>.md
+python3 bench/run.py                                   # 默认 ENGINES=mqjs-Os，MODELS 全部
+ENGINES=mqjs-Os,mqjs-O2,qjs MODELS=signal,static-fine python3 bench/run.py
 ```
 
-单跑一项：`bench/.engine/mqjs -d -I bench/harness.js -I bench/signal.js bench/run.js S2`。
+结果写到 `bench/results/<时间戳>.md`；verify 阶段会跨引擎、跨模型断言 patch 流一致。单跑一项：`bench/.engine-qjs/qjs --std -d -I bench/harness.js -I bench/signal.js bench/run.js S2`。
 
-结果：[results/2026-09-14.md](./results/2026-09-14.md)（macOS arm64）。
+结果：[results/2026-09-14.md](./results/2026-09-14.md)（模型对比，MicroQuickJS）、[results/2026-09-15-engines.md](./results/2026-09-15-engines.md)（引擎对比）。

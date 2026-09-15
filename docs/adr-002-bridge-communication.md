@@ -6,6 +6,9 @@
 
 ## 1. 背景
 
+> **2026-09-15 修订（ADR-005）**：事实基础中的 mquickjs-kmp 换为 quickjs-kmp（shim ABI 与 `JsRuntime` 形态同形，句柄表保留）。变化：QuickJS 有微任务队列——每次 K 入口返回前先 `JS_ExecutePendingJob` 排空再 flush，事务边界不变；Promise 原生，J3 / K3 的 `.then` 对接不再需要 polyfill；"每引擎一个程序"的硬限制消失，K0 改为"注册运行时模块（`@tiny-ui/core` / `@tiny-ui/native`）→ 求值页面模块（Promise）→ 调 `default` 导出挂载"；每页一 Runtime 不变，但 Runtime 基线内存更高（见 ADR-005）。
+
+
 ADR-001 定了 JS 侧"状态变化 → 攒 patch → 过桥"的模型，但没有回答桥本身怎么工作：谁在什么时候以什么方式调谁、跑在哪个线程、一次调用的边界在哪、两边靠什么 id 对上号、出错了怎么办、载荷长什么样。序列化只是最后一问，前面几问不定，它定不了。
 
 事实基础（mquickjs-kmp 的 shim 与 `JsRuntime`，2026-09-15 核对）：

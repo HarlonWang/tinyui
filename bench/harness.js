@@ -102,7 +102,7 @@ function runScenario(name, verify) {
     } else {
         throw new Error("unknown scenario " + name);
     }
-    gc();
+    if (typeof gc === "function") gc(); else std.gc();
     print("RESULT " + JSON.stringify({
         model: MODEL, scenario: name, ms: t1 - t0,
         flushes: __flushCount, patches: __patchCount, bytes: __patchBytes

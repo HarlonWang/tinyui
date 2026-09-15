@@ -6,6 +6,9 @@
 
 ## 1. 背景
 
+> **2026-09-15 修订（ADR-005）**：本文写作时引擎为 MicroQuickJS（ES5 子集、无 Proxy、固定堆）。引擎已切换为 QuickJS（ES2025），下文所有"无 Proxy / ES5 / 固定堆"的论证均为历史背景。核心决策（运行时 Signal、所有权 / 清理、For / Show）不受影响，bench 在 QuickJS 上的复跑见 ADR-005 §3.1。受影响的具体点：Promise polyfill 与"已 settled 同步续行"作废（微任务原生）；`async/await` 原生；"Proxy store"进入待定；§3.7 中"固定堆上必漏"的措辞在 QuickJS 下改为"内存慢涨"，所有权机制本身不变。
+
+
 业务侧写声明式组件已定（见 [README](./README.md)），要定的是两件事：**状态变了之后 JS 侧怎么知道该更新什么**，以及**"vdom diff"放不放、放在哪**。这两件事决定桥的粒度、JS 侧的内存形态、以及要不要写编译器。
 
 约束来自 mquickjs：无 Proxy → 淘汰 Vue 式响应式；纯解释 + 固定小堆 → 常驻对象数与每次更新的函数调用数都是成本；ES5 → 运行时只能靠闭包。

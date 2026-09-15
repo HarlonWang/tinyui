@@ -1,24 +1,25 @@
 # JS 桥接 UI 框架 · 设计文档
 
-基于 [mquickjs-kmp](https://github.com/HarlonWang/mquickjs-kmp) 与 Compose Multiplatform 的动态化 UI 框架：业务页面用 JS 写声明式组件，Android / iOS 双端由 Compose 渲染，页面可热下发。本目录是各项关键技术选型的决策记录（ADR），一项决策一个文件；本文只放各决策共享的背景，不重复写进单项 ADR。
+基于 QuickJS（经 quickjs-kmp 接入）与 Compose Multiplatform 的 UI 框架：业务页面用 JS 写声明式组件，Android / iOS 双端由 Compose 渲染。热下发不在本期（ADR-005）。本目录是各项关键技术选型的决策记录（ADR），一项决策一个文件；本文只放各决策共享的背景，不重复写进单项 ADR。
 
 ## 框架定位
 
 - **逻辑和 UI 描述都在 JS**：JS 侧维护组件树与状态，产出节点树 / patch；Kotlin 侧只负责把 patch 映射到 Compose 原生组件（Text / Column / LazyColumn …）
-- **业务感知是声明式组件**：写法接近 React / Solid 的组件函数 + JSX，构建期 TS → ES5，再由 `kmpjsc` 预编译成字节码下发
+- **业务感知是声明式组件**：写法接近 React / Solid 的组件函数 + JSX，语言目标 ES2025，构建期只做 TS 擦除与 JSX → `h()`，预编译成 ES 模块字节码内置在 App 里
 - **渲染不自己画**：直接映射到 Compose 组件，双端一致性由 CMP 保证
 
-## mquickjs 硬约束（所有选型的前提）
+## 引擎约束（所有选型的前提）
 
-来源：`native/mquickjs/README.md`（mquickjs-kmp 仓内的上游副本）与 mquickjs-kmp 的 shim 设计。
+引擎为 QuickJS（bellard/quickjs，版本 2026-06-04，ES2025），经 quickjs-kmp 接入。2026-09-15 由 MicroQuickJS 切换而来（[ADR-005](./adr-005-engine.md)）；ADR-001～004 中提到的 ES5 / 无 Proxy / 固定堆等约束均为切换前的历史背景，已在各处标注。
 
 | 约束 | 对设计的直接影响 |
 |---|---|
-| ES5 子集、始终严格模式；无 Proxy / class / Promise / Map / Set / 箭头函数 / 模板字符串 | 业务代码可用 TS 写再降级，但**框架运行时不能依赖 Proxy 与 Promise**；Vue 式 Proxy 响应式出局；异步靠 ES5 Promise polyfill（纯闭包） |
-| 固定大小堆 + 压缩 GC，无 JIT | 常驻对象数与分配率直接决定 GC 频率；解释器下函数调用不免费 |
-| 无事件循环，JS 的每次执行都是宿主调进来的 | "宿主调用返回前统一 flush" 天然就是事务边界，不需要 microtask 调度 |
-| 值跨界只走原始类型 / UTF-8 字符串，Kotlin 永不持有 JSValue | JS 侧节点就是整数 id；树 / patch 以 JSON 字符串过桥 |
-| `Date` 只有 `Date.now()`；`for of` 仅支持数组 | 业务代码写法约束，构建期可检查 |
+| ES2025，无 JIT，纯解释 | 业务 TS 零降级；性能量级见 ADR-005 §3.1（单次更新 + flush 约 3 µs，1000 行挂载约 15 ms） |
+| 有微任务队列，但没有事件循环；JS 的每次执行都是宿主调进来的 | 宿主调用返回前排空微任务再 flush，"一次 K 入口 = 一个事务"的边界不变 |
+| malloc 分配 + 引用计数 + 环检测 GC；`JS_SetMemoryLimit` 限额；一个 Runtime 基线约 4～8 MB（含 1000 行页面） | 每页一 Runtime，返回栈深页要有回收策略 |
+| 原生 ESM，loader 回调 | 运行时与页面都是模块字节码，引擎侧只解析预注册的裸说明符 |
+| 没有 `Intl`、DOM、`fetch` | 格式化、网络、存储走 `@tiny-ui/native` |
+| 值跨界只走原始类型 / 字符串 / JSON，Kotlin 永不持有 JSValue（句柄表） | JS 侧节点就是整数 id；树 / patch 以 JSON 字符串过桥 |
 
 ## 总体运行模型
 
@@ -30,6 +31,7 @@ JS                                   桥                          Kotlin
 ```
 
 - JS 不做整树 diff，Kotlin 不做任何比对：两边都只处理"真正变了的那几个属性"（详见 [ADR-001](./adr-001-reactivity-model.md)）
+- 每次 K 入口结束前先排空微任务（Promise 回调在同一次宿主调用内跑完），再 flush
 - 结构变化只发生在 `For`（keyed reconcile，限于单个父节点的子列表）和 `Show` 两个原语里
 - 文本输入、滚动位置等高频交互状态**默认留在 Kotlin 侧自治**，JS 只收 `onChange` 通知，需要改时发命令（`x` op）而非回写 prop——避免受控组件跨桥往返造成的输入卡顿（详见 [ADR-004](./adr-004-events-and-input-ownership.md)）
 
@@ -41,6 +43,7 @@ JS                                   桥                          Kotlin
 | [ADR-002](./adr-002-bridge-communication.md) | JS 与 Kotlin 通信机制（含序列化） | 已定（2026-09-15） | 双向入口 5 + 5；JS 专用线程、K 入口不等待；一次 K 入口一个事务；每页一个引擎；错误六类一个 sink；JSON 文本载荷 |
 | [ADR-003](./adr-003-kotlin-node-tree-and-registry.md) | Kotlin 侧节点表与组件注册 | 已定（2026-09-15） | 节点即重组单元；JS 线程直接写快照状态、主线程只重组；App 级注册表 + 清单下发；prop / event schema 写入时转换 |
 | [ADR-004](./adr-004-events-and-input-ownership.md) | 事件与输入状态归属 | 已定（2026-09-15） | 事件三分（离散 / 流式输入 / 连续），60 fps 状态留 Kotlin；新增 `x` 命令 op（ref + cmd）；文本框 initial prop + 命令 + 事件，不受控回写 |
+| [ADR-005](./adr-005-engine.md) | JS 引擎选型 | 已定（2026-09-15） | MicroQuickJS → QuickJS（ES2025，经 quickjs-kmp）；原生 ESM 必选；不降级 ES5；热下发不在本期 |
 
 ## 命名
 
@@ -62,13 +65,13 @@ npm 裸包 `tinyui` 不可用：npm 防仿冒规则判定其与已有的 `tiny-u
 tinyui/
 ├── docs/               README、ADR、roadmap
 ├── packages/           所有 npm 包，目录名 = 包名去掉 scope（pnpm workspace）
-│   ├── core/           @tiny-ui/core    JS 运行时（signal / effect / owner / h / For / Show / ref + cmd / Promise polyfill）+ 内置组件的 TS 类型（由 schema/ 生成，无运行时代码）
+│   ├── core/           @tiny-ui/core    JS 运行时（signal / effect / owner / h / For / Show / ref + cmd）+ 内置组件的 TS 类型（由 schema/ 生成，无运行时代码）；作为 ES 模块字节码内置
 │   ├── native/         @tiny-ui/native  业务调用的宿主能力 API（http / storage / toast / navigation / i18n …，即 ADR-002 的 J2 / J3）
-│   └── cli/            @tiny-ui/cli     构建工具：TSX → h() → ES5 → kmpjsc 字节码，`tinyui build`
-├── compose/            wang.harlon:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件
+│   └── cli/            @tiny-ui/cli     构建工具：TSX → h()（ES2025）→ 每页一个 ESM 模块字节码，`tinyui build`
+├── compose/            wang.harlon:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件；依赖 quickjs-kmp
 ├── schema/             内置组件 schema 的唯一真值 → 生成 packages/core 的 .d.ts 与 compose/ 的注册代码
 ├── sample/             示例 App（Android + iOS），M1 Counter / M2 列表页在这里跑
-├── bench/              响应式模型 benchmark（引擎从 mquickjs-kmp 现场编译进 .engine/，见 bench/README.md）
+├── bench/              响应式模型与引擎 benchmark（引擎现场编译进 .engine*/，见 bench/README.md）
 └── build-logic/        Gradle convention plugins
 ```
 
