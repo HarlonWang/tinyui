@@ -1,0 +1,18 @@
+# bench
+bench/.engine/
+
+# Gradle / Kotlin
+.gradle/
+build/
+local.properties
+.kotlin/
+
+# Node
+node_modules/
+dist/
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+.vscode/

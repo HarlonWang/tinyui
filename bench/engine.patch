@@ -1,0 +1,16 @@
+--- a/mqjs.c
++++ b/mqjs.c
+@@ -115,9 +115,12 @@
+     return JS_NewInt64(ctx, get_date_ms());
+ }
+ 
++/* bench: sub-millisecond resolution (upstream returns whole ms) */
+ static JSValue js_performance_now(JSContext *ctx, JSValue *this_val, int argc, JSValue *argv)
+ {
+-    return JS_NewInt64(ctx, get_time_ms());
++    struct timespec ts;
++    clock_gettime(CLOCK_MONOTONIC, &ts);
++    return JS_NewFloat64(ctx, (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1e6);
+ }
+ 
+ /* load a script */
