@@ -8,7 +8,7 @@
 |---|---|---|
 | 框架命名与建仓 | 命名 TinyUI、域名 tinyui.app、仓 `HarlonWang/tinyui` 均已定 | 已定 |
 | 仓库结构 | 已定单仓，目录见 README"仓库结构"一节 | 已定 |
-| 构建链骨架 | Gradle（build-logic / compose / sample）+ pnpm workspace（core / native / cli）+ CI，`./gradlew build` 与 `pnpm build` 通过；quickjs-kmp 本地 composite、CI 走 Central | PR 中 |
+| 构建链骨架 | Gradle（build-logic / compose / sample 含 iOS 壳）+ pnpm workspace（core / native / cli）+ CI（PR 门禁 Android / host / apiCheck，iOS 全量在 ios.yml tag / 手动）；quickjs-kmp 本地 composite、CI 走 Central | 已完成（PR #1，2026-09-16） |
 | **quickjs-kmp** | 新建 SDK 接入 QuickJS（ADR-005），复制 mquickjs-kmp 骨架，API 同形；M1 shim + 三端构建，M2 句柄表 + Runtime + 微任务 + **ESM 模块表**，M3 字节码 + 宿主编译工具 + 发布。TinyUI 的 `compose/` 依赖它 | 待开，**A 组内优先级最高** |
 | 构建链打通 | CLI：TSX → `h()`（ES2025）→ 每页一个 ESM 模块字节码，`external: ["@tiny-ui/*"]`；运行时两个模块字节码内置 | 待开，依赖 quickjs-kmp M3 |
 
