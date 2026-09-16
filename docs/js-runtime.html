@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TinyUI JS 层总览</title>
+<style>
+:root {
+    --paper: #fbfaf6; --ink: #1e232c; --muted: #646b78; --rule: #dfdcd3; --panel: #f1efe8;
+    --accent: #0f766e; --accent-soft: rgba(15, 118, 110, 0.12); --code: #f3f1ea;
+    color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --paper: #15181e; --ink: #e5e3dc; --muted: #9aa1ad; --rule: #2d323b; --panel: #1d2128;
+        --accent: #3fc1b0; --accent-soft: rgba(63, 193, 176, 0.16); --code: #1a1e25;
+        color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --paper: #15181e; --ink: #e5e3dc; --muted: #9aa1ad; --rule: #2d323b; --panel: #1d2128;
+    --accent: #3fc1b0; --accent-soft: rgba(63, 193, 176, 0.16); --code: #1a1e25;
+    color-scheme: dark;
+}
+html { background: var(--paper); }
+body {
+    margin: 0; padding-block: 32px 80px; padding-inline: 20px;
+    background: var(--paper); color: var(--ink);
+    font: 15px/1.7 -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Sans CJK SC", "Segoe UI", sans-serif;
+}
+main { max-width: 880px; margin: 0 auto; }
+h1 { font-size: 30px; line-height: 1.25; margin: 0 0 8px; letter-spacing: -0.01em; text-wrap: balance; }
+h2 { font-size: 21px; margin: 56px 0 12px; padding-top: 16px; border-top: 1px solid var(--rule); text-wrap: balance; }
+h3 { font-size: 16px; margin: 28px 0 8px; }
+p { margin: 0 0 12px; max-width: 70ch; }
+.lede { color: var(--muted); max-width: 70ch; }
+.lede a, p a, td a, li a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 20px 0 8px; font-size: 13px; }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+figure { margin: 20px 0 28px; }
+.fig { overflow-x: auto; padding: 16px 8px; background: var(--panel); border-radius: 6px; }
+.fig svg { display: block; max-width: 100%; height: auto; min-width: 560px; margin: 0 auto; font: 12.5px -apple-system, "PingFang SC", "Segoe UI", sans-serif; }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; max-width: 70ch; }
+/* svg vocabulary */
+.box { fill: var(--paper); stroke: currentColor; stroke-width: 1.2; }
+.box.dim { stroke-dasharray: 4 3; }
+.box.acc { stroke: var(--accent); stroke-width: 1.8; }
+.fill-acc { fill: var(--accent-soft); stroke: none; }
+.edge { fill: none; stroke: currentColor; stroke-width: 1.2; }
+.edge.dim { stroke-dasharray: 4 3; }
+.edge.acc { stroke: var(--accent); stroke-width: 1.6; }
+.t { fill: currentColor; }
+.t.b { font-weight: 600; }
+.t.s { font-size: 11px; fill: var(--muted); }
+.t.acc { fill: var(--accent); font-weight: 600; }
+.t.mono { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 11.5px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 12px 0 20px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+th { font-size: 12px; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; }
+td:first-child { white-space: nowrap; }
+.tbl { overflow-x: auto; }
+code { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.9em; background: var(--code); padding: 1px 5px; border-radius: 3px; }
+pre { background: var(--code); padding: 14px 16px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; margin: 12px 0 20px; }
+pre code { background: none; padding: 0; font-size: inherit; }
+.ops { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; white-space: nowrap; }
+ul { padding-left: 20px; max-width: 70ch; }
+li { margin-bottom: 6px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 16px 0 8px; }
+.fact { border-left: 3px solid var(--accent); padding: 4px 0 4px 14px; }
+.fact b { display: block; margin-bottom: 4px; }
+.fact p { font-size: 14px; color: var(--muted); margin: 0; }
+@media (max-width: 600px) { h1 { font-size: 24px; } .fig svg { min-width: 520px; } }
+</style>
+</head>
+<body>
+<main>
+<div class="eyebrow">TinyUI · docs · 草案 2026-09-16</div>
+<h1>JS 层总览：从 TSX 到 patch</h1>
+<p class="lede">本页是 JS 层的系统说明。三份契约 <a href="./runtime-api.md">runtime-api.md</a>、<a href="./jsx-transform.md">jsx-transform.md</a>、<a href="./patch-protocol.md">patch-protocol.md</a> 是它的参考手册：定义在那边，"为什么"和"怎么连起来"在这边。前提是 ADR-001（Signal、所有权）、ADR-002（事务、桥）、ADR-004（命令）、ADR-005（引擎、模块）。</p>
+<nav class="toc">
+<a href="#layers">0 六层</a><a href="#structure">1 结构</a><a href="#time">2 时间</a><a href="#loop">3 响应式闭环</a><a href="#life">4 一个页面的一生</a><a href="#rules">5 规则表</a>
+</nav>
+
+<h2 id="layers">0. 六层</h2>
+<p>业务只看见第一层；框架的全部工作是把第一层的声明变成第六层的状态，并在状态变化时只动第五层里真正变了的几条。</p>
+<figure>
+<div class="fig">
+<svg viewBox="0 0 1160 150" role="img" aria-label="六层：TSX 源码经 JSX 变换成 h() 调用，经构建链成模块字节码，经 K0 加载成运行时对象，经 flush 成 patch 消息，经 J1 写入 Kotlin 节点表">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
+<marker id="ar-acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker></defs>
+<g>
+<rect class="box" x="0" y="40" width="160" height="70" rx="4"/><text class="t b" x="80" y="68" text-anchor="middle">TSX 源码</text><text class="t s" x="80" y="88" text-anchor="middle">业务写的</text>
+<rect class="box" x="200" y="40" width="160" height="70" rx="4"/><text class="t b" x="280" y="68" text-anchor="middle">h() + thunk()</text><text class="t s" x="280" y="88" text-anchor="middle">esbuild 产物</text>
+<rect class="box" x="400" y="40" width="160" height="70" rx="4"/><text class="t b" x="480" y="68" text-anchor="middle">ESM 模块字节码</text><text class="t s" x="480" y="88" text-anchor="middle">pages/home.bin</text>
+<rect class="box acc" x="600" y="40" width="160" height="70" rx="4"/><text class="t b" x="680" y="68" text-anchor="middle">运行时对象</text><text class="t s" x="680" y="88" text-anchor="middle">owner / effect / signal / id</text>
+<rect class="box" x="800" y="40" width="160" height="70" rx="4"/><text class="t b" x="880" y="68" text-anchor="middle">patch 消息</text><text class="t s" x="880" y="88" text-anchor="middle">JSON 数组</text>
+<rect class="box" x="1000" y="40" width="160" height="70" rx="4"/><text class="t b" x="1080" y="68" text-anchor="middle">Kotlin 节点表</text><text class="t s" x="1080" y="88" text-anchor="middle">ADR-003</text>
+<line class="edge" x1="160" y1="75" x2="198" y2="75" marker-end="url(#ar)"/><text class="t s mono" x="180" y="30" text-anchor="middle">jsx-transform</text>
+<line class="edge" x1="360" y1="75" x2="398" y2="75" marker-end="url(#ar)"/><text class="t s mono" x="380" y="30" text-anchor="middle">build-chain</text>
+<line class="edge" x1="560" y1="75" x2="598" y2="75" marker-end="url(#ar)"/><text class="t s" x="580" y="30" text-anchor="middle">K0 加载</text>
+<line class="edge" x1="760" y1="75" x2="798" y2="75" marker-end="url(#ar)"/><text class="t s" x="780" y="30" text-anchor="middle">flush</text>
+<line class="edge" x1="960" y1="75" x2="998" y2="75" marker-end="url(#ar)"/><text class="t s" x="980" y="30" text-anchor="middle">J1</text>
+<text class="t s" x="80" y="135" text-anchor="middle">jsx-transform.md 定它</text>
+<text class="t s" x="480" y="135" text-anchor="middle">build-chain.md</text>
+<text class="t s" x="680" y="135" text-anchor="middle">runtime-api.md · 本页</text>
+<text class="t s" x="880" y="135" text-anchor="middle">patch-protocol.md</text>
+</g>
+</svg>
+</div>
+<figcaption>六层与各自的契约文档。第四层是本页的主角：它是唯一在页面存活期间持续存在、持续变化的一层。</figcaption>
+</figure>
+
+<h2 id="structure">1. 结构：一个页面在内存里有什么</h2>
+<p>一个页面 = 一个引擎 = 一份运行时对象。运行时里只有七样东西，它们之间的引用关系如下。</p>
+<figure>
+<div class="fig">
+<svg viewBox="0 0 900 400" role="img" aria-label="运行时对象图：owner 树持有 effect 与 handler，effect 与 signal 订阅表双向引用，effect 绑定节点 id 并写 patch 缓冲，pending 表独立；patch 缓冲经 flush 交给 __host_apply">
+<g>
+<rect class="box dim" x="20" y="20" width="300" height="300" rx="6"/>
+<text class="t s" x="34" y="42">owner 树（只在结构边界）</text>
+<rect class="box" x="60" y="60" width="220" height="40" rx="4"/><text class="t b" x="170" y="85" text-anchor="middle">根 owner</text>
+<rect class="box" x="60" y="150" width="220" height="40" rx="4"/><text class="t b" x="170" y="175" text-anchor="middle">Show 分支 owner</text>
+<rect class="box" x="60" y="240" width="220" height="40" rx="4"/><text class="t b" x="170" y="265" text-anchor="middle">For 行 owner × N</text>
+<line class="edge" x1="170" y1="100" x2="170" y2="148" marker-end="url(#ar)"/><text class="t s" x="180" y="128">Show 的 cleanup 持有</text>
+<line class="edge" x1="170" y1="190" x2="170" y2="238" marker-end="url(#ar)"/><text class="t s" x="180" y="218">For 显式持有</text>
+
+<rect class="box acc" x="400" y="60" width="180" height="50" rx="4"/><text class="t b" x="490" y="81" text-anchor="middle">effect</text><text class="t s" x="490" y="99" text-anchor="middle">每个动态 prop 一个</text>
+<rect class="box" x="680" y="60" width="200" height="50" rx="4"/><text class="t b" x="780" y="81" text-anchor="middle">signal 订阅表</text><text class="t s" x="780" y="99" text-anchor="middle">signal → 订阅它的 effect</text>
+<rect class="box" x="400" y="170" width="180" height="50" rx="4"/><text class="t b" x="490" y="191" text-anchor="middle">节点 id + 槽位表</text><text class="t s" x="490" y="209" text-anchor="middle">id 递增不回收</text>
+<rect class="box" x="680" y="170" width="200" height="50" rx="4"/><text class="t b" x="780" y="191" text-anchor="middle">handler 表</text><text class="t s mono" x="780" y="209" text-anchor="middle">nodeId:event → fn</text>
+<rect class="box" x="400" y="280" width="180" height="50" rx="4"/><text class="t b" x="490" y="301" text-anchor="middle">pending 表</text><text class="t s mono" x="490" y="319" text-anchor="middle">cbId → resolve/reject</text>
+<rect class="box" x="680" y="280" width="200" height="50" rx="4"/><text class="t b" x="780" y="301" text-anchor="middle">patch 缓冲</text><text class="t s" x="780" y="319" text-anchor="middle">本事务待发的 op</text>
+
+<path class="edge dim" d="M280 80 L398 80" marker-end="url(#ar)"/><text class="t s" x="340" y="72" text-anchor="middle">登记</text>
+<path class="edge dim" d="M280 170 C340 170 340 90 398 88" marker-end="url(#ar)"/>
+<path class="edge dim" d="M280 260 C340 260 340 100 398 96" marker-end="url(#ar)"/>
+<path class="edge dim" d="M280 272 C420 272 560 250 678 205" marker-end="url(#ar)"/><text class="t s" x="560" y="262" text-anchor="middle">onCleanup 登记</text>
+<line class="edge acc" x1="580" y1="85" x2="678" y2="85" marker-end="url(#ar-acc)" marker-start="url(#ar-acc)"/><text class="t s acc" x="629" y="77" text-anchor="middle">双向引用</text>
+<line class="edge" x1="490" y1="110" x2="490" y2="168" marker-end="url(#ar)"/><text class="t s" x="500" y="143">绑定 (id, key)</text>
+<path class="edge" d="M560 110 C620 150 700 200 745 278" marker-end="url(#ar)"/><text class="t s" x="655" y="205" text-anchor="end">写 op</text>
+<line class="edge acc" x1="780" y1="330" x2="780" y2="378" marker-end="url(#ar-acc)"/><text class="t s acc mono" x="770" y="362" text-anchor="end">flush → __host_apply</text>
+<text class="t s" x="490" y="352" text-anchor="middle">K3 到达时删；不挂任何 owner</text>
+</g>
+</svg>
+</div>
+<figcaption>七样运行时对象与引用方向。实线是运行期的活引用，虚线是"登记到名单上、dispose 时按名单清理"。只有 effect 与 signal 之间是双向的，这也是泄漏唯一可能发生的地方。</figcaption>
+</figure>
+<div class="tbl"><table>
+<thead><tr><th>东西</th><th>由谁创建</th><th>挂在谁名下</th><th>什么时候没</th></tr></thead>
+<tbody>
+<tr><td>owner</td><td><code>mount</code> 建根；<code>Show</code> 每次切分支建一个；<code>For</code> 每建一行建一个</td><td>根 owner 被运行时持有；分支 owner 被 <code>Show</code> 的 cleanup 持有；行 owner 被 <code>For</code> 持有</td><td>dispose：跑名下 effect 的解绑与 cleanups。分支切换、行删除、卸载</td></tr>
+<tr><td>effect</td><td><code>h()</code> 遇到 <code>thunk</code> prop；<code>effect()</code>；<code>For</code> / <code>Show</code> 自己</td><td>创建时的当前 owner</td><td>owner dispose 时；或它所属的 effect 重跑前（effect 内 <code>onCleanup</code>）</td></tr>
+<tr><td>signal</td><td><code>signal()</code>、<code>memo()</code>、<code>createResource()</code>、<code>For</code> 的 item accessor</td><td>不挂任何名下，靠引用存活</td><td>没人引用时被 GC。订阅它的 effect 被解绑后，signal 若无其他引用即回收</td></tr>
+<tr><td>节点 id</td><td><code>h()</code> 对内置类型分配</td><td>不是对象，只是整数；Kotlin 侧才有节点</td><td>不回收。<code>r</code> 之后不再出现</td></tr>
+<tr><td>槽位表</td><td><code>h()</code> 处理 children 时</td><td>内置节点</td><td>随节点 <code>r</code></td></tr>
+<tr><td>handler</td><td><code>h()</code> 遇到 <code>onXxx</code></td><td>通过 <code>onCleanup</code> 登记到当前 owner</td><td>owner dispose</td></tr>
+<tr><td>pending 回调</td><td><code>__host_call</code> 时分配 cbId</td><td>运行时全局一张表</td><td>K3 到达时删；页面卸载即引擎关闭，整表消失</td></tr>
+<tr><td>patch 缓冲</td><td>运行时全局</td><td></td><td>每次 flush 清空；E2 时清空不发</td></tr>
+</tbody></table></div>
+<div class="facts">
+<div class="fact"><b>组件不在图里</b><p>组件函数跑完就没了，它留下的只有它创建的节点 id、effect、handler，全都挂在结构 owner 名下。所以"组件卸载"这个概念不存在，只有"owner dispose"。</p></div>
+<div class="fact"><b>effect 之间没有父子</b><p>行 owner 由 <code>For</code> 显式持有，不在 <code>For</code> 的 effect 之下；<code>For</code> 重跑（删一行）不会连累其他行的 effect。</p></div>
+<div class="fact"><b>泄漏只有一种来源</b><p>没有 owner 的 effect：它不在任何 dispose 名单上，signal 的订阅表会永远持有它。这就是"同步渲染期外创建 effect 抛错"的理由。</p></div>
+</div>
+
+<h2 id="time">2. 时间：一个页面的四个时期</h2>
+<figure>
+<div class="fig">
+<svg viewBox="0 0 900 660" role="img" aria-label="时序图：模块求值、挂载渲染期、事务期循环、卸载；同步渲染期只出现在 mount 内和 flush 内两处">
+<g>
+<rect class="box" x="90" y="16" width="120" height="30" rx="4"/><text class="t b" x="150" y="36" text-anchor="middle">Kotlin</text>
+<rect class="box" x="390" y="16" width="120" height="30" rx="4"/><text class="t b" x="450" y="36" text-anchor="middle">运行时</text>
+<rect class="box" x="690" y="16" width="120" height="30" rx="4"/><text class="t b" x="750" y="36" text-anchor="middle">业务代码</text>
+<line class="edge dim" x1="150" y1="46" x2="150" y2="640"/><line class="edge dim" x1="450" y1="46" x2="450" y2="640"/><line class="edge dim" x1="750" y1="46" x2="750" y2="640"/>
+
+<text class="t b" x="12" y="78">①</text><text class="t s" x="150" y="78" text-anchor="middle">模块求值：K0 注册 core / native，求值页面模块，顶层代码跑一次</text>
+<line class="edge" x1="150" y1="108" x2="448" y2="108" marker-end="url(#ar)"/><text class="t mono" x="300" y="102" text-anchor="middle">mount(page, props, host)</text>
+
+<rect class="fill-acc" x="380" y="122" width="460" height="82" rx="4"/>
+<text class="t b" x="12" y="142">②</text><text class="t acc" x="392" y="140">同步渲染期 · currentOwner = 根</text>
+<line class="edge" x1="450" y1="160" x2="748" y2="160" marker-end="url(#ar)"/><text class="t mono" x="600" y="154" text-anchor="middle">page(props)</text>
+<line class="edge" x1="750" y1="192" x2="452" y2="192" marker-end="url(#ar)"/><text class="t s" x="600" y="186" text-anchor="middle">h() · thunk 首跑 · For / Show 建首批</text>
+
+<line class="edge dim" x1="450" y1="230" x2="152" y2="230" marker-end="url(#ar)"/><text class="t s" x="300" y="224" text-anchor="middle">返回（quickjs-kmp 排空微任务）</text>
+<line class="edge" x1="150" y1="260" x2="448" y2="260" marker-end="url(#ar)"/><text class="t mono" x="300" y="254" text-anchor="middle">flush()</text>
+<line class="edge acc" x1="450" y1="292" x2="152" y2="292" marker-end="url(#ar-acc)"/><text class="t mono acc" x="300" y="286" text-anchor="middle">__host_apply(首帧 patch)  J1</text>
+
+<rect class="box dim" x="60" y="318" width="800" height="222" rx="6"/>
+<text class="t b" x="12" y="340">③</text><text class="t s" x="72" y="338">事务期 · 每个 K 入口一次，循环</text>
+<line class="edge" x1="150" y1="360" x2="448" y2="360" marker-end="url(#ar)"/><text class="t mono" x="300" y="354" text-anchor="middle">dispatch / resolve / reject / emit / visible</text>
+<line class="edge" x1="450" y1="390" x2="748" y2="390" marker-end="url(#ar)"/><text class="t s" x="600" y="384" text-anchor="middle">handler 或 .then 回调</text>
+<line class="edge" x1="750" y1="420" x2="452" y2="420" marker-end="url(#ar)"/><text class="t s" x="600" y="414" text-anchor="middle">setX(v)：值立即可见，effect 只入 pending 队列</text>
+<line class="edge dim" x1="450" y1="450" x2="152" y2="450" marker-end="url(#ar)"/><text class="t s" x="300" y="444" text-anchor="middle">返回（排空微任务：.then 链在这里跑完）</text>
+<line class="edge" x1="150" y1="478" x2="448" y2="478" marker-end="url(#ar)"/><text class="t mono" x="300" y="472" text-anchor="middle">flush()</text>
+<rect class="fill-acc" x="380" y="488" width="460" height="24" rx="4"/><text class="t acc" x="392" y="504">同步渲染期再次打开：重跑 effect · For 建行 · Show 切分支</text>
+<line class="edge acc" x1="450" y1="530" x2="152" y2="530" marker-end="url(#ar-acc)"/><text class="t mono acc" x="300" y="524" text-anchor="middle">__host_apply(patch)</text>
+
+<text class="t b" x="12" y="578">④</text>
+<line class="edge" x1="150" y1="576" x2="448" y2="576" marker-end="url(#ar)"/><text class="t mono" x="300" y="570" text-anchor="middle">unmount()</text>
+<line class="edge" x1="450" y1="606" x2="748" y2="606" marker-end="url(#ar)"/><text class="t s" x="600" y="600" text-anchor="middle">根 owner dispose → 业务 onCleanup</text>
+<text class="t s" x="150" y="636" text-anchor="middle">关引擎；节点表由 Kotlin 自己清</text>
+</g>
+</svg>
+</div>
+<figcaption>四个时期。着色的两段是同步渲染期：唯一允许创建 effect 与登记 onCleanup 的窗口。它只出现在 mount 内和 flush 内，handler、.then、定时器回调都在窗口之外。</figcaption>
+</figure>
+<p><b>事务</b>是 Kotlin 的一次 K 入口到它的 <code>flush()</code> 返回。业务在事务里改 signal，值立刻可见但 effect 不跑；flush 时按入队顺序重跑，产出的 patch 攒成一条消息。一个 handler 改十个 signal 只出一条消息；同一事务里没人读到过"一半更新"的树。</p>
+<p><b>flush 为什么是第二次调用</b>：quickjs-kmp 在每次最外层调用返回前排空微任务队列。K3 的 <code>resolve()</code> 返回时业务的 <code>.then</code> 链才跑完、signal 才写入；flush 若放在 <code>resolve()</code> 函数体末尾会先于 <code>.then</code> 执行，放在微任务里会排在后续链节之前。只有 Kotlin 在同一次 <code>withEngine</code> 里再调一次 <code>flush()</code>，才保证"回送 → 回调 → 写入 → flush"落在同一事务。</p>
+
+<h2 id="loop">3. 响应式闭环</h2>
+<figure>
+<div class="fig">
+<svg viewBox="0 0 840 250" role="img" aria-label="响应式闭环：setX 写入经订阅表进 pending 队列，flush 时 effect 重跑，结果变化写 patch 缓冲，事务末尾经 J1 交出；effect 重跑时读 signal 建立订阅，供下次写入查表">
+<g>
+<rect class="box" x="20" y="40" width="160" height="56" rx="4"/><text class="t b mono" x="100" y="63" text-anchor="middle">setX(v)</text><text class="t s" x="100" y="82" text-anchor="middle">值立即可见</text>
+<rect class="box" x="240" y="40" width="160" height="56" rx="4"/><text class="t b" x="320" y="63" text-anchor="middle">pending 队列</text><text class="t s" x="320" y="82" text-anchor="middle">FIFO，去重</text>
+<rect class="box acc" x="460" y="40" width="160" height="56" rx="4"/><text class="t b" x="540" y="63" text-anchor="middle">effect 重跑</text><text class="t s" x="540" y="82" text-anchor="middle">先解绑旧依赖再收集</text>
+<rect class="box" x="680" y="40" width="140" height="56" rx="4"/><text class="t b" x="750" y="63" text-anchor="middle">patch 缓冲</text><text class="t s" x="750" y="82" text-anchor="middle">结果 !== 上次才写</text>
+<rect class="box" x="460" y="170" width="160" height="50" rx="4"/><text class="t b" x="540" y="191" text-anchor="middle">建立订阅</text><text class="t s" x="540" y="208" text-anchor="middle">currentEffect 登记进订阅表</text>
+<rect class="box acc" x="680" y="170" width="140" height="50" rx="4"/><text class="t b mono" x="750" y="199" text-anchor="middle">__host_apply</text>
+
+<line class="edge" x1="180" y1="68" x2="238" y2="68" marker-end="url(#ar)"/><text class="t s" x="209" y="60" text-anchor="middle">查订阅表</text>
+<line class="edge" x1="400" y1="68" x2="458" y2="68" marker-end="url(#ar)"/><text class="t s" x="429" y="60" text-anchor="middle">flush</text>
+<line class="edge" x1="620" y1="68" x2="678" y2="68" marker-end="url(#ar)"/><text class="t s" x="649" y="60" text-anchor="middle">写 op</text>
+<line class="edge acc" x1="750" y1="96" x2="750" y2="168" marker-end="url(#ar-acc)"/><text class="t s acc" x="760" y="136">事务末尾 J1</text>
+<line class="edge" x1="540" y1="96" x2="540" y2="168" marker-end="url(#ar)"/><text class="t s" x="550" y="136">读 signal</text>
+<path class="edge dim" d="M460 195 C300 195 100 195 100 98" marker-end="url(#ar)"/><text class="t s" x="280" y="188" text-anchor="middle">下次写入时按表通知</text>
+</g>
+</svg>
+</div>
+<figcaption>依赖不是声明出来的，是执行时被观察到的：effect 跑的时候 currentEffect 指向它，期间任何 x() 读取都把它登记进 x 的订阅表。</figcaption>
+</figure>
+<ul>
+<li>同一句 <code>count()</code>，在 thunk 里读会订阅，在 handler 里读只是取值。</li>
+<li><code>memo</code> 是拉取式的：写入后立刻读它得到新值，因为它在读取时发现自己脏了就重算；它的订阅者仍走 pending 队列。</li>
+<li>条件分支里的读取（<code>done() ? a() : b()</code>）只订阅这次真正读到的那个，因为每次重跑先解绑。</li>
+</ul>
+
+<h2 id="life">4. 一个页面的一生</h2>
+<p>页面：拉一个待办列表，加载中显示占位，每行点击切换完成态。</p>
+<pre><code>// pages/todos.tsx
+import { signal, createResource, Column, Row, Text, Show, For } from "@tiny-ui/core";
+import { http } from "@tiny-ui/native";
+
+interface Todo { id: number; title: string; done: boolean }
+
+export default function Todos() {
+    const [todos] = createResource(() =&gt; http.get&lt;Todo[]&gt;("/todos"));
+    return (
+        &lt;Column&gt;
+            &lt;Text text={`${(todos() ?? []).length} todos`} /&gt;
+            &lt;Show when={todos()} fallback={() =&gt; &lt;Text text="loading…" /&gt;}&gt;
+                {() =&gt; (
+                    &lt;Column&gt;
+                        &lt;For each={todos()!} key={(t) =&gt; t.id}&gt;
+                            {(todo) =&gt; &lt;TodoRow todo={todo()} /&gt;}
+                        &lt;/For&gt;
+                    &lt;/Column&gt;
+                )}
+            &lt;/Show&gt;
+        &lt;/Column&gt;
+    );
+}
+
+function TodoRow(props: { todo: Todo }) {
+    const [done, setDone] = signal(props.todo.done);
+    return (
+        &lt;Row onClick={() =&gt; setDone(!done())}&gt;
+            &lt;Text text={props.todo.title} color={done() ? "#999999" : "#000000"} /&gt;
+        &lt;/Row&gt;
+    );
+}</code></pre>
+
+<h3>4.1 编译</h3>
+<p>CLI 只做两件事：含调用 / 属性访问的属性表达式包成 <code>thunk</code>，JSX 变成 <code>h()</code>。事件、<code>key</code>、<code>fallback</code>、渲染函数是函数，原样保留。</p>
+<pre><code>function Todos() {
+    const [todos] = createResource(() =&gt; http.get("/todos"));
+    return h(Column, null,
+        h(Text, { text: thunk(() =&gt; `${(todos() ?? []).length} todos`) }),
+        h(Show, { when: thunk(() =&gt; todos()), fallback: () =&gt; h(Text, { text: "loading…" }) },
+            () =&gt; h(Column, null,
+                h(For, { each: thunk(() =&gt; todos()), key: (t) =&gt; t.id },
+                    (todo) =&gt; h(TodoRow, { todo: thunk(() =&gt; todo()) })))));
+}
+function TodoRow(props) {
+    const [done, setDone] = signal(props.todo.done);
+    return h(Row, { onClick: () =&gt; setDone(!done()) },
+        h(Text, { text: thunk(() =&gt; props.todo.title), color: thunk(() =&gt; done() ? "#999999" : "#000000") }));
+}</code></pre>
+<p><code>todo={todo()}</code> 被包成 <code>thunk(() =&gt; todo())</code>，<code>TodoRow</code> 里 <code>props.todo</code> 是 getter，读到的是该行 item accessor 的实时值。</p>
+
+<h3>4.2 挂载（事务 1）与数据回来（事务 2）</h3>
+<figure>
+<div class="fig">
+<svg viewBox="0 0 900 430" role="img" aria-label="Kotlin 节点表在事务 1 之后与事务 2 之后的对比：加载中只有根、Column 3、Text 1 与 Show 槽位里的 Text 2；数据回来后 Text 1 改值，槽位切换为 Column 4，For 槽位里两行 Row 各含一个 Text">
+<g>
+<text class="t b" x="200" y="24" text-anchor="middle">事务 1 之后：加载中</text>
+<rect class="box" x="150" y="40" width="100" height="30" rx="4"/><text class="t" x="200" y="60" text-anchor="middle">0 根容器</text>
+<line class="edge" x1="200" y1="70" x2="200" y2="98" marker-end="url(#ar)"/>
+<rect class="box" x="150" y="100" width="100" height="30" rx="4"/><text class="t" x="200" y="120" text-anchor="middle">3 Column</text>
+<line class="edge" x1="200" y1="130" x2="110" y2="168" marker-end="url(#ar)"/><line class="edge" x1="200" y1="130" x2="290" y2="168" marker-end="url(#ar)"/>
+<rect class="box" x="40" y="170" width="140" height="30" rx="4"/><text class="t" x="110" y="190" text-anchor="middle">1 Text “0 todos”</text>
+<rect class="box dim" x="220" y="170" width="140" height="30" rx="4"/><text class="t s" x="290" y="190" text-anchor="middle">Show 槽位 · 长度 1</text>
+<line class="edge" x1="290" y1="200" x2="290" y2="228" marker-end="url(#ar)"/>
+<rect class="box" x="220" y="230" width="140" height="30" rx="4"/><text class="t" x="290" y="250" text-anchor="middle">2 Text “loading…”</text>
+<text class="t s" x="40" y="300">槽位表 3：[节点 1, Show(O1: [2])]</text>
+<text class="t s" x="40" y="322">owner：根(E1, E2) → O1(空)</text>
+<text class="t s" x="40" y="344">pending：{1 → http.get}</text>
+
+<line class="edge acc" x1="400" y1="200" x2="458" y2="200" marker-end="url(#ar-acc)"/>
+<text class="t s acc" x="429" y="186" text-anchor="middle">resolve(1, …)</text><text class="t s acc" x="429" y="220" text-anchor="middle">flush()</text>
+
+<text class="t b" x="690" y="24" text-anchor="middle">事务 2 之后：列表</text>
+<rect class="box" x="640" y="40" width="100" height="30" rx="4"/><text class="t" x="690" y="60" text-anchor="middle">0 根容器</text>
+<line class="edge" x1="690" y1="70" x2="690" y2="98" marker-end="url(#ar)"/>
+<rect class="box" x="640" y="100" width="100" height="30" rx="4"/><text class="t" x="690" y="120" text-anchor="middle">3 Column</text>
+<line class="edge" x1="690" y1="130" x2="570" y2="168" marker-end="url(#ar)"/><line class="edge" x1="690" y1="130" x2="770" y2="168" marker-end="url(#ar)"/>
+<rect class="box acc" x="490" y="170" width="150" height="30" rx="4"/><text class="t" x="565" y="190" text-anchor="middle">1 Text “2 todos”</text>
+<rect class="box dim" x="690" y="170" width="160" height="30" rx="4"/><text class="t s" x="770" y="190" text-anchor="middle">Show 槽位 · 已切分支</text>
+<line class="edge" x1="770" y1="200" x2="770" y2="228" marker-end="url(#ar)"/>
+<rect class="box acc" x="690" y="230" width="160" height="30" rx="4"/><text class="t" x="770" y="250" text-anchor="middle">4 Column</text>
+<line class="edge" x1="770" y1="260" x2="770" y2="288" marker-end="url(#ar)"/>
+<rect class="box dim" x="690" y="290" width="160" height="30" rx="4"/><text class="t s" x="770" y="310" text-anchor="middle">For 槽位 · 长度 2</text>
+<line class="edge" x1="770" y1="320" x2="700" y2="348" marker-end="url(#ar)"/><line class="edge" x1="770" y1="320" x2="840" y2="348" marker-end="url(#ar)"/>
+<rect class="box acc" x="640" y="350" width="120" height="30" rx="4"/><text class="t" x="700" y="370" text-anchor="middle">6 Row → 5 Text</text>
+<rect class="box acc" x="780" y="350" width="120" height="30" rx="4"/><text class="t" x="840" y="370" text-anchor="middle">8 Row → 7 Text</text>
+<text class="t s" x="490" y="410">节点 2 已 r；O1 已 dispose；行 owner R1(6,5) R2(8,7) 各持 done signal 与 handler</text>
+</g>
+</svg>
+</div>
+<figcaption>Kotlin 节点表的前后对比。着色的是事务 2 改动或新建的节点：Text 1 换了值，Show 槽位从节点 2 切到节点 4 的整棵分支。节点 3 与根没被碰。</figcaption>
+</figure>
+<p><code>mount()</code> 建根 owner，调 <code>Todos(props)</code>。JS 先求值参数再调用，所以子节点先于父节点建：</p>
+<div class="tbl"><table>
+<thead><tr><th>步骤</th><th>运行时里发生的</th><th>patch</th></tr></thead>
+<tbody>
+<tr><td><code>createResource</code></td><td>建 <code>data</code> / <code>loading</code> / <code>error</code> 三个 signal；分配 cbId 1 存进 pending 表；<code>__host_call("http.get", 1, …)</code></td><td></td></tr>
+<tr><td><code>h(Text, {text: thunk})</code></td><td>分配 id 1；建 effect E1，首跑读 <code>data</code>（undefined）→ 订阅</td><td class="ops">["c",1,"Text"] ["p",1,"text","0 todos"]</td></tr>
+<tr><td><code>h(Show, …)</code></td><td>建 effect E2，首跑读 <code>data</code> → 假 → 建分支 owner O1，在其中调 fallback：id 2</td><td class="ops">["c",2,"Text"] ["p",2,"text","loading…"]</td></tr>
+<tr><td><code>h(Column, null, 节点1, Show槽位)</code></td><td>分配 id 3；槽位表 <code>[节点1, Show(O1: [2])]</code></td><td class="ops">["i",3,1,0] ["i",3,2,1]</td></tr>
+<tr><td><code>mount</code> 收尾</td><td>根节点 3 挂到根容器</td><td class="ops">["i",0,3,0]</td></tr>
+</tbody></table></div>
+<p><code>mount()</code> 返回，Kotlin 调 <code>flush()</code>：pending 队列为空，缓冲里 8 条 op 一次交给 J1。</p>
+<p>Kotlin 拿到响应，<code>resolve(1, "[{id:1,title:'Buy milk',done:false},{id:2,title:'Call mom',done:true}]")</code>。运行时从 pending 表取出 resolver 调用，返回；quickjs-kmp 排空微任务：<code>createResource</code> 的 <code>.then</code> 写 <code>data</code>，E1、E2 入队。Kotlin 调 <code>flush()</code>：</p>
+<div class="tbl"><table>
+<thead><tr><th>effect</th><th>做什么</th><th>patch</th></tr></thead>
+<tbody>
+<tr><td>E1 重跑</td><td><code>"2 todos"</code> !== 上次</td><td class="ops">["p",1,"text","2 todos"]</td></tr>
+<tr><td>E2 重跑</td><td>真值性变了：dispose O1、删节点 2；建 O2，在其中调分支函数</td><td class="ops">["r",2]</td></tr>
+<tr><td>分支函数</td><td><code>h(For, …)</code> 建 effect E3，首跑读 <code>data</code>，reconcile <code>[]</code> → <code>[1, 2]</code>：每个 key 建行 owner R1 / R2，各自调 <code>TodoRow</code>。行内：<code>signal(done)</code>、Text 的两个 effect（订阅 item accessor 与 <code>done</code>）、Row 的 handler 进 handler 表并登记到行 owner</td><td class="ops">["c",5,"Text"] ["p",5,"text","Buy milk"] ["p",5,"color","#000000"]<br>["c",6,"Row"] ["p",6,"onClick",true] ["i",6,5,0]<br>第二行同形（id 7、8）</td></tr>
+<tr><td>分支根 <code>h(Column)</code></td><td>分配 id 4；槽位表 <code>[For(R1: 6, R2: 8)]</code></td><td class="ops">["i",4,6,0] ["i",4,8,1]</td></tr>
+<tr><td>Show 槽位</td><td>把新分支根插到节点 3 的槽位 1</td><td class="ops">["i",3,4,1]</td></tr>
+</tbody></table></div>
+<p>一条消息 17 个 op。E1 先于 E2 跑，因为两者按订阅 <code>data</code> 的顺序入队。</p>
+
+<h3>4.3 点击（事务 3）</h3>
+<p>用户点第一行。Kotlin <code>dispatch(6, "onClick", "{}")</code>：查 handler 表 <code>6:onClick</code>，调用；<code>setDone(true)</code> 把 color effect 入队。<code>flush()</code>：</p>
+<pre><code>[["p",5,"color","#999999"]]</code></pre>
+<p>Row、Column、另一行全程没被碰。不是比对后发现没变，是根本不在链路上。</p>
+
+<h3>4.4 列表变化（事务 4）</h3>
+<p>业务某处 <code>refetch()</code>，新数据里第 2 条没了、第 1 条改了标题、多了第 3 条。K3 回送后 <code>data</code> 写入，E1 与 E3 入队（行内 effect 不订阅 <code>data</code>）：</p>
+<div class="tbl"><table>
+<thead><tr><th>effect</th><th>做什么</th><th>patch</th></tr></thead>
+<tbody>
+<tr><td>E1</td><td>计数</td><td class="ops">["p",1,"text","2 todos"]（值相同则不发）</td></tr>
+<tr><td>E3 reconcile <code>[1,2]</code> → <code>[1,3]</code></td><td>key 2：dispose R2（解绑两个 effect、删 <code>8:onClick</code>），发 <code>r</code>；key 1：item 引用变了，写该行的 item accessor，行内 title effect 入队；key 3：建 R3</td><td class="ops">["r",8]<br>["c",9,"Text"] … ["c",10,"Row"] ["p",10,"onClick",true] ["i",10,9,0]<br>["i",4,10,1]</td></tr>
+<tr><td>行 1 的 title effect</td><td>同一 flush 内继续</td><td class="ops">["p",5,"text","Buy oat milk"]</td></tr>
+</tbody></table></div>
+<p>行 1 没有重建：它的 <code>done</code> signal、handler、节点 id 都保留。这是 item 用 accessor 而不是值的原因。</p>
+
+<h3>4.5 卸载</h3>
+<p><code>unmount()</code>：根 owner dispose → 跑 cleanups：<code>Show</code> 登记的 cleanup dispose O2 → <code>For</code> 登记的 cleanup dispose 全部行 owner → 各行的 effect 解绑、handler 删除、业务 <code>onCleanup</code> 执行。不发任何 patch；Kotlin 随后关引擎、清节点表。pending 表里未回的请求随引擎消失。</p>
+
+<h2 id="rules">5. 规则表</h2>
+<p>每条"必须 / 不能"都是前四节的推论，第三列指向出处。</p>
+<div class="tbl"><table>
+<thead><tr><th>规则</th><th>违反时</th><th>由谁推出</th></tr></thead>
+<tbody>
+<tr><td>effect / <code>onCleanup</code> 只能在同步渲染期创建</td><td>抛错</td><td>§1：没有 owner 的 effect 永远不会被清理</td></tr>
+<tr><td>组件函数只跑一次，必须同步返回一个节点</td><td><code>async</code> / 返回 Promise 抛 E2</td><td>§2：<code>await</code> 之后已在渲染期外；§1：组件不在图里，没有第二次机会</td></tr>
+<tr><td>children 创建后不可变；结构变化只经 <code>For</code> / <code>Show</code></td><td>编译期报错</td><td>§1：只有 <code>For</code> / <code>Show</code> 开 owner，别处建的节点没人负责删</td></tr>
+<tr><td><code>For</code> / <code>Show</code> 只能直接写在内置节点的 children 里</td><td><code>h()</code> 抛 E2</td><td>§1：槽位表挂在内置节点上，它们需要一个父节点来算 index</td></tr>
+<tr><td>动态 prop 由编译器包 <code>thunk</code>，值本身不能是函数</td><td>函数型 prop 抛 E2</td><td>§4.1：运行时靠包装区分"动态 prop"与"渲染函数"；ADR-002：函数不过桥</td></tr>
+<tr><td>数组 / 对象整体替换才触发</td><td><code>list().push(x)</code> 静默无效</td><td>§3：<code>===</code> 判等；v1 没有 Proxy 追踪</td></tr>
+<tr><td><code>For</code> 的 item 是 accessor</td><td>写 <code>todo.title</code> 类型错</td><td>§4.4：同 key 元素换引用时更新行而不重建行</td></tr>
+<tr><td><code>Show</code> 只在真值性变化时切分支</td><td></td><td>§4.2：切分支 = 重建整棵分支，值变化不该付这个代价</td></tr>
+<tr><td>同一 flush 内一个 effect 重跑超过 100 次</td><td>抛 E2</td><td>§3：effect 写自己读的 signal 会成环</td></tr>
+<tr><td>K 入口 = 入口函数 + <code>flush()</code> 两次调用</td><td>少调 flush 则 patch 滞留到下一事务</td><td>§2：微任务在入口返回前排空</td></tr>
+<tr><td>E1 不回滚 signal</td><td></td><td>ADR-002 §3.5：signal 已写、effect 没跑会让 UI 与状态分叉</td></tr>
+<tr><td>E2 丢弃整条消息</td><td></td><td>§2：Kotlin 不能拿到半棵树</td></tr>
+<tr><td>节点 id 不回收</td><td></td><td>§1：id 只是整数，Kotlin 侧靠它对上号，复用会让在途事件指错节点</td></tr>
+</tbody></table></div>
+</main>
+</body>
+</html>

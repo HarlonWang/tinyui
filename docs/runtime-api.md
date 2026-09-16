@@ -1,6 +1,6 @@
 # JS 运行时 API：`@tiny-ui/core` v1
 
-- 状态：草案（2026-09-16），待确认后定稿；定稿后是 M1 的实现依据。系统说明见 [js-runtime.md](./js-runtime.md)，本文只放定义
+- 状态：草案（2026-09-16），待确认后定稿；定稿后是 M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
 - 来源：ADR-001（Signal、所有权）、ADR-002（桥入口、事务、错误）、ADR-004（ref + cmd、事件 payload）、ADR-005（组件函数必须同步、`createResource`、原生 Promise）
 - 范围：业务可见的 API、它们的精确语义、页面模块契约、以及运行时与 Kotlin 之间的桥入口（内部契约）。JSX 写法如何变成对这些 API 的调用见 [jsx-transform.md](./jsx-transform.md)；产出的 patch 形态见 [patch-protocol.md](./patch-protocol.md)
 
@@ -224,7 +224,7 @@ export default function Home(props: HomeProps): Node { … }
 | K5 | `emit(topic: string, payloadJson: string)` | |
 | — | `protocol: number` | patch 协议版本，与 `PROTOCOL` 相同；Kotlin 在 K0 核对，不等则 E6 |
 
-每个 K 入口在 Kotlin 侧是同一次 `withEngine` 里的**两次调用**：先调入口函数，再调 `flush()`（理由见 [js-runtime.md](./js-runtime.md) §2）。
+每个 K 入口在 Kotlin 侧是同一次 `withEngine` 里的**两次调用**：先调入口函数，再调 `flush()`（理由见 [js-runtime.html](./js-runtime.html) §2）。
 
 | 入口 | 签名 | 说明 |
 |---|---|---|

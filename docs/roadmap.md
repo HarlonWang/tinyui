@@ -25,7 +25,7 @@
 
 | 项 | 来源 | 状态 |
 |---|---|---|
-| JS 运行时 API：`signal` / `memo` / `effect` / `onCleanup` / `For` / `Show` / `ref` + `cmd` / **`createResource`**；"组件函数必须同步"规则；J3 / K3 用原生 Promise | ADR-001 / 004 / 005 | 草案（[js-runtime.md](./js-runtime.md) + [runtime-api.md](./runtime-api.md)），待确认 |
+| JS 运行时 API：`signal` / `memo` / `effect` / `onCleanup` / `For` / `Show` / `ref` + `cmd` / **`createResource`**；"组件函数必须同步"规则；J3 / K3 用原生 Promise | ADR-001 / 004 / 005 | 草案（[js-runtime.html](./js-runtime.html) + [runtime-api.md](./runtime-api.md)），待确认 |
 | CLI 的 JSX 变换：自动 thunk（Solid 式 getter 包裹）、source map 输出 | ADR-005 | 草案（[jsx-transform.md](./jsx-transform.md)），待确认 |
 | patch 协议：六种 op、JSON 形态、是否带协议版本号 | ADR-001 / 002 / 004 | 草案（[patch-protocol.md](./patch-protocol.md)），待确认 |
 | schema DSL 形态 + 由 schema 生成 TS 类型定义的工具链 | ADR-003 | 待开 |
