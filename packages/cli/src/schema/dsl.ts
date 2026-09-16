@@ -52,6 +52,7 @@ export const color = (o: PropOptions & { default?: string } = {}) => prop("color
 /** A number in dp, or "fill" / "wrap". */
 export const size = (o: PropOptions & { default?: number | "fill" | "wrap" } = {}) => prop("size", o);
 export function enumOf<const T extends readonly string[]>(values: T, o: PropOptions & { default?: T[number] } = {}): PropDef {
+    if (values.length === 0) throw new Error("enumOf() needs at least one value");
     return { ...prop("enum", o), values };
 }
 
@@ -80,6 +81,12 @@ export function defineComponent(name: string, input: ComponentInput = {}): Compo
     for (const key of Object.keys(input.props ?? {})) {
         if (/^on[A-Z]/.test(key) || key === "ref" || key === "children" || key === "key") throw new Error(`${name}: ${key} cannot be a prop name`);
     }
+    // every name becomes an unquoted TS member and a Kotlin map key
+    const IDENT = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
+    const check = (what: string, key: string) => { if (!IDENT.test(key)) throw new Error(`${name}: ${what} ${key} must be an identifier`); };
+    Object.keys(input.props ?? {}).forEach((k) => check("prop", k));
+    for (const [ev, fields] of Object.entries(input.events ?? {})) { check("event", ev); Object.keys(fields).forEach((k) => check(`${ev} field`, k)); }
+    for (const [cmd, fields] of Object.entries(input.commands ?? {})) { check("command", cmd); Object.keys(fields).forEach((k) => check(`${cmd} arg`, k)); }
     return {
         name,
         ...(input.doc !== undefined && { doc: input.doc }),

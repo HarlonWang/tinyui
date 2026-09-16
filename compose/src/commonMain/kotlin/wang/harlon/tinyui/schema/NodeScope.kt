@@ -20,8 +20,8 @@ interface NodeScope {
     /** K2: fire and forget, on any thread. [payload] is the flat JSON object the event schema declares. */
     fun dispatch(event: String, payload: String = "{}")
 
-    /** Layout modifier from the common props, with the click gesture when `onClick` is registered. */
-    fun modifier(): Modifier
+    /** Layout modifier from the common props; with [clickable] the click gesture is attached when `onClick` is registered. */
+    fun modifier(clickable: Boolean = true): Modifier
 
     @Composable
     fun Children()

@@ -44,7 +44,12 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         }
         Snapshot.withMutableSnapshot {
             for (op in ops) applyOp(op)
-            for (node in born) node.created = true
+            for (node in born) {
+                node.created = true
+                registry.schema(node.type)?.props?.forEach { (key, spec) ->
+                    if (spec.required && key !in node.props) report(PatchProblem("[\"c\",${node.id},\"${node.type}\"]", "required prop $key was not set in the creating flush"))
+                }
+            }
             born.clear()
         }
     }
@@ -73,9 +78,9 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         val id = f.int(1) ?: return report(PatchProblem(op.toString(), "c without id"))
         val type = f.string(2) ?: return report(PatchProblem(op.toString(), "c without type"))
         if (nodes.containsKey(id)) return report(PatchProblem(op.toString(), "id already exists"))
-        val known = registry.schema(type) != null
-        if (!known) report(PatchProblem(op.toString(), "unknown component type, rendering Placeholder"))
-        nodes[id] = UiNode(id, if (known) type else ComponentRegistry.PLACEHOLDER).also { born += it }
+        // the requested type stays on the node: Render falls back to Placeholder, which shows it in debug
+        if (registry.schema(type) == null) report(PatchProblem(op.toString(), "unknown component type, rendering Placeholder"))
+        nodes[id] = UiNode(id, type).also { born += it }
     }
 
     private fun setProp(f: JsonArray, op: JsonElement) {

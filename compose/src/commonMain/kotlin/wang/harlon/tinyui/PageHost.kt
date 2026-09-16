@@ -75,7 +75,7 @@ class PageHost(
     private val page: ByteArray,
     val registry: ComponentRegistry,
     private val sink: PageSink,
-    private val services: HostServices = HostServices(),
+    private val services: HostServices = HostServices.Default,
     private val propsJson: String = "{}",
     /** K entries longer than this are interrupted and fail the page (docs/native-api.md §6). */
     private val entryTimeoutMs: Long = 5_000,
@@ -86,7 +86,8 @@ class PageHost(
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val timers = HashMap<Int, Job>()
-    private val subscriptions = ArrayList<AutoCloseable>()
+    private val subscriptions = HashMap<String, AutoCloseable>()
+    private val storeVersions = HashMap<String, Long>()
     private val runtime = JsRuntime(JsEngineConfig(moduleScheme = MODULE_SCHEME, logger = sink::log))
     private var entries: Entries? = null
 
@@ -98,7 +99,8 @@ class PageHost(
     fun start() {
         scope.launch {
             try {
-                runtime.withEngine {
+                // K0 + K1 mount under the same timeout as every other entry: a page that spins on load fails as E6
+                withTimeout(entryTimeoutMs) { runtime.withEngine {
                     registerHost(this)
                     step("registering @tiny-ui/core") { registerModule(runtimeBundle.core) }
                     step("registering @tiny-ui/native") { registerModule(runtimeBundle.native) }
@@ -117,7 +119,9 @@ class PageHost(
                         }
                     }
                     e.call("flush")
-                }
+                } }
+            } catch (t: TimeoutCancellationException) {
+                fail("E6", IllegalStateException("page load exceeded ${entryTimeoutMs} ms and was interrupted"))
             } catch (t: Throwable) {
                 fail("E6", t)
             }
@@ -132,13 +136,14 @@ class PageHost(
     /** K5. The host calls this for `navigation.result`; bus topics arrive through the page's own subscriptions. */
     fun emit(topic: String, payloadJson: String) = entry("emit", JsValue.Str(topic), JsValue.Str(payloadJson))
 
-    private fun entry(name: String, vararg args: JsValue, before: () -> Unit = {}) {
+    private fun entry(name: String, vararg args: JsValue, before: () -> Unit = {}, skipWhen: () -> Boolean = { false }) {
         if (failure != null) return
         scope.launch {
             try {
                 withTimeout(entryTimeoutMs) {
                     runtime.withEngine {
                         before()
+                        if (skipWhen()) return@withEngine
                         val e = entries ?: return@withEngine
                         e.call(name, *args)
                         e.call("flush")
@@ -155,12 +160,12 @@ class PageHost(
     fun close() {
         scope.cancel() // pending entries and timers are its children
         tree.clear()
-        subscriptions.forEach { runCatching { it.close() } }
-        subscriptions.clear()
-        // not a child of `scope`: cancelling the page must not cancel its own teardown
+        // not a child of `scope`: cancelling the page must not cancel its own teardown; the lock orders it after any running entry
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 runtime.withEngine {
+                    subscriptions.values.forEach { runCatching { it.close() } }
+                    subscriptions.clear()
                     entries?.let { e -> runCatching { e.call("unmount") }; e.close() }
                     entries = null
                 }
@@ -256,11 +261,21 @@ class PageHost(
             "navigation.push" -> services.navigator.push(a.str("page") ?: return, a["params"]?.toString() ?: "{}")
             "navigation.pop" -> services.navigator.pop(a["result"]?.toString())
             "store.set" -> { val key = a.str("key") ?: return; services.store.set(key, a.str("value") ?: "null") }
-            "store.subscribe" -> { val key = a.str("key") ?: return; subscriptions += services.store.observe(key) { json -> emit("store:$key", """{"value":$json}""") } }
+            // one host listener per key / topic; JS fans out to its own handlers
+            "store.subscribe" -> { val key = a.str("key") ?: return; subscriptions.getOrPut("store:$key") { services.store.observe(key) { v -> storeChanged(key, v) } } }
             "events.emit" -> services.events.emit(a.str("topic") ?: return, a["payload"]?.toString() ?: "{}")
-            "events.subscribe" -> { val topic = a.str("topic") ?: return; subscriptions += services.events.subscribe(topic) { json -> emit(topic, json) } }
+            "events.subscribe" -> { val topic = a.str("topic") ?: return; subscriptions.getOrPut("events:$topic") { services.events.subscribe(topic) { json -> emit(topic, json) } } }
             else -> sink.log("unknown J4 $name")
         }
+    }
+
+    /** Notifications may arrive out of order across threads; the version decides, applied inside the entry (under the lock). */
+    private fun storeChanged(key: String, value: StoreValue) {
+        var stale = false
+        entry("emit", JsValue.Str("store:$key"), JsValue.Str("""{"value":${value.json}}"""), before = {
+            val last = storeVersions[key] ?: -1
+            if (value.version <= last) stale = true else storeVersions[key] = value.version
+        }, skipWhen = { stale })
     }
 
     /**
@@ -287,13 +302,13 @@ class PageHost(
         override fun dispatch(event: String, payload: String) = this@PageHost.dispatch(node.id, event, payload)
 
         /** docs/components.md §2: size → clip → background → gesture → padding. */
-        override fun modifier(): Modifier {
+        override fun modifier(clickable: Boolean): Modifier {
             var m: Modifier = Modifier
             when (val w = get<SizeValue>("width")) { is SizeValue.Fixed -> m = m.width(w.dp); SizeValue.Fill -> m = m.fillMaxWidth(); SizeValue.Wrap -> m = m.wrapContentWidth(); null -> {} }
             when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
             get<Dp>("cornerRadius")?.let { m = m.clip(RoundedCornerShape(it)) }
             get<Color>("background")?.let { m = m.background(it) }
-            if (has("onClick")) m = m.clickable { dispatch("onClick") }
+            if (clickable && has("onClick")) m = m.clickable { dispatch("onClick") }
             get<Dp>("padding")?.let { m = m.padding(it) }
             return m
         }

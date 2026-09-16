@@ -28,7 +28,7 @@ class NodeTreeTest {
 
     @Test
     fun convertsPropsOnWriteAndRestoresDefaultsOnNull() {
-        tree.apply("""[["c",1,"Text"],["p",1,"color","#FF0000"],["p",1,"fontSize",18],["i",0,1,0]]""")
+        tree.apply("""[["c",1,"Text"],["p",1,"text","t"],["p",1,"color","#FF0000"],["p",1,"fontSize",18],["i",0,1,0]]""")
         val node = tree.node(1)!!
         assertEquals(Color(0xFFFF0000), node.props["color"])
         assertEquals(18.sp, node.props["fontSize"])
@@ -39,7 +39,7 @@ class NodeTreeTest {
 
     @Test
     fun moveRemoveAndCommandsFollowTheProtocol() {
-        tree.apply("""[["c",1,"Column"],["c",2,"Text"],["c",3,"Text"],["c",4,"Text"],["i",1,2,0],["i",1,3,1],["i",1,4,2],["i",0,1,0]]""")
+        tree.apply("""[["c",1,"Column"],["c",2,"Text"],["p",2,"text","a"],["c",3,"Text"],["p",3,"text","b"],["c",4,"Text"],["p",4,"text","c"],["i",1,2,0],["i",1,3,1],["i",1,4,2],["i",0,1,0]]""")
         tree.apply("""[["m",1,4,0]]""")
         assertEquals(listOf(4, 2, 3), ids(tree.node(1)!!))
         tree.apply("""[["r",2]]""")
@@ -80,6 +80,15 @@ class NodeTreeTest {
     }
 
     @Test
+    fun requiredPropsAreCheckedWhenTheCreatingFlushEnds() {
+        tree.apply("""[["c",1,"Text"],["i",0,1,0]]""")
+        assertEquals("required prop text was not set in the creating flush", problems.single().reason)
+        problems.clear()
+        tree.apply("""[["c",2,"Button"],["p",2,"text","ok"],["i",0,2,1]]""")
+        assertTrue(problems.isEmpty(), problems.toString())
+    }
+
+    @Test
     fun layoutPropsApplyToEveryLayoutComponent() {
         tree.apply("""[["c",1,"Spacer"],["p",1,"width","fill"],["p",1,"height",12],["p",1,"padding",4],["i",0,1,0]]""")
         val node = tree.node(1)!!
@@ -91,11 +100,11 @@ class NodeTreeTest {
 
     @Test
     fun badOpsAreSkippedAndReported() {
-        tree.apply("""[["c",1,"Text"],["p",1,"nope","x"],["p",1,"fontSize","big"],["p",1,"onTap",true],["p",99,"text","x"],["c",2,"pp.Unknown"],["i",0,2,7],["x",1,"focus",{}],["i",0,1,0]]""")
+        tree.apply("""[["c",1,"Text"],["p",1,"text","t"],["p",1,"nope","x"],["p",1,"fontSize","big"],["p",1,"onTap",true],["p",99,"text","x"],["c",2,"pp.Unknown"],["i",0,2,7],["x",1,"focus",{}],["i",0,1,0]]""")
         val expected = listOf("prop not in schema", "cannot convert", "event not in schema", "unknown node 99", "unknown component type", "index 7 out of", "command not in schema")
         assertEquals(expected.size, problems.size, problems.toString())
         for ((reason, prefix) in problems.map { it.reason }.zip(expected)) assertTrue(reason.startsWith(prefix), "$reason should start with $prefix")
-        assertEquals(ComponentRegistry.PLACEHOLDER, tree.node(2)!!.type)
+        assertEquals("pp.Unknown", tree.node(2)!!.type, "the requested type stays; rendering falls back to Placeholder")
         assertEquals(listOf(1, 2), ids(tree.root), "the clamped insert (7 → 0 on an empty root) still lands")
         tree.apply("not json")
         assertEquals("message is not a JSON array", problems.last().reason.substringBefore(" ("))

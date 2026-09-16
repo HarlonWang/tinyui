@@ -14,7 +14,12 @@ class HostServices(
     val events: EventBus = EventBus(),
     /** Extra values merged into `device.info` (docs/native-api.md §1). */
     val deviceInfo: Map<String, String> = emptyMap(),
-)
+) {
+    companion object {
+        /** One shared instance, so a page whose host passes nothing keeps a stable `remember` key. */
+        val Default = HostServices()
+    }
+}
 
 /** J4 `navigation.push` / `navigation.pop`; results travel back as K5 `navigation.result` (docs/app-model.md). */
 interface Navigator {
@@ -27,28 +32,32 @@ interface Navigator {
     }
 }
 
+/** A store value with the monotonic version of its write; listeners drop what arrives out of order. */
+class StoreValue(val json: String, val version: Long)
+
 /** App-wide key → JSON text; the truth for cross-page state (docs/app-model.md §3). */
 interface Store {
     fun get(key: String): String?
     fun set(key: String, json: String)
-    /** [listener] receives the new JSON; the returned handle removes it. */
-    fun observe(key: String, listener: (String) -> Unit): AutoCloseable
+    /** [listener] receives every write to [key], possibly out of order across threads; the returned handle removes it. */
+    fun observe(key: String, listener: (StoreValue) -> Unit): AutoCloseable
 }
 
 /** Copy-on-write: pages subscribe on their engine threads while the host writes from anywhere. */
 @OptIn(ExperimentalAtomicApi::class)
 class InMemoryStore : Store {
-    private val values = AtomicReference<Map<String, String>>(emptyMap())
-    private val listeners = Listeners()
+    private val values = AtomicReference<Map<String, StoreValue>>(emptyMap())
+    private val listeners = Listeners<StoreValue>()
 
-    override fun get(key: String): String? = values.load()[key]
+    override fun get(key: String): String? = values.load()[key]?.json
 
     override fun set(key: String, json: String) {
-        values.update { it + (key to json) }
-        listeners.notify(key, json)
+        var written: StoreValue? = null
+        values.update { map -> StoreValue(json, (map[key]?.version ?: 0) + 1).also { written = it }.let { map + (key to it) } }
+        listeners.notify(key, written!!)
     }
 
-    override fun observe(key: String, listener: (String) -> Unit): AutoCloseable = listeners.add(key, listener)
+    override fun observe(key: String, listener: (StoreValue) -> Unit): AutoCloseable = listeners.add(key, listener)
 }
 
 class HttpRequest(val method: String, val url: String, val headers: Map<String, String>, val bodyJson: String?, val timeoutMs: Long?)
@@ -87,7 +96,7 @@ fun interface Config {
 
 /** One bus for host events and business events; pages subscribe per topic (docs/app-model.md §3). */
 class EventBus {
-    private val listeners = Listeners()
+    private val listeners = Listeners<String>()
 
     fun emit(topic: String, payloadJson: String) = listeners.notify(topic, payloadJson)
 
@@ -95,16 +104,16 @@ class EventBus {
 }
 
 @OptIn(ExperimentalAtomicApi::class)
-internal class Listeners {
-    private val byKey = AtomicReference<Map<String, List<(String) -> Unit>>>(emptyMap())
+internal class Listeners<T> {
+    private val byKey = AtomicReference<Map<String, List<(T) -> Unit>>>(emptyMap())
 
-    fun add(key: String, listener: (String) -> Unit): AutoCloseable {
+    fun add(key: String, listener: (T) -> Unit): AutoCloseable {
         byKey.update { it + (key to (it[key].orEmpty() + listener)) }
         return AutoCloseable { byKey.update { it + (key to (it[key].orEmpty() - listener)) } }
     }
 
-    fun notify(key: String, json: String) {
-        byKey.load()[key]?.forEach { it(json) }
+    fun notify(key: String, value: T) {
+        byKey.load()[key]?.forEach { it(value) }
     }
 }
 

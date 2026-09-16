@@ -42,17 +42,19 @@ export default function Todos() {
     return (
         <Column width="fill" height="fill" padding={16} gap={12}>
             <Text text={`${todos().length} todos · ${todos().filter((t) => t.done).length} done`} fontSize={20} fontWeight="bold" />
-            <Row gap={8} align="center">
-                <TextField ref={input} placeholder="New todo" width={240} onCommit={(e) => add(e.text)} />
-                <Button text="Add" variant="outlined" onClick={() => input.cmd("focus")} />
-            </Row>
             <Show when={first()} fallback={() => <Text text={firstMeta.error() ? "failed to load" : "loading…"} />}>
                 {() => (
-                    <LazyColumn ref={list} width="fill" gap={4} onReachEnd={() => loadMore()}>
-                        <For each={todos()} key={(t) => t.id}>
-                            {(todo) => <TodoRow todo={todo()} onToggle={() => toggle(todo().id)} onRemove={() => remove(todo().id)} />}
-                        </For>
-                    </LazyColumn>
+                    <Column width="fill" gap={12}>
+                        <Row gap={8} align="center">
+                            <TextField ref={input} placeholder="New todo" width={240} onCommit={(e) => add(e.text)} />
+                            <Button text="Add" variant="outlined" onClick={() => input.cmd("focus")} />
+                        </Row>
+                        <LazyColumn ref={list} width="fill" gap={4} onReachEnd={() => loadMore()}>
+                            <For each={todos()} key={(t) => t.id}>
+                                {(todo) => <TodoRow todo={todo()} onToggle={() => toggle(todo().id)} onRemove={() => remove(todo().id)} />}
+                            </For>
+                        </LazyColumn>
+                    </Column>
                 )}
             </Show>
         </Column>

@@ -19,7 +19,7 @@ fun TinyUIPage(
     page: ByteArray,
     registry: ComponentRegistry,
     sink: PageSink,
-    services: HostServices = HostServices(),
+    services: HostServices = HostServices.Default,
     propsJson: String = "{}",
     modifier: Modifier = Modifier,
     error: @Composable (PageFailure) -> Unit = { Text("TinyUI page failed (${it.kind}): ${it.message}") },

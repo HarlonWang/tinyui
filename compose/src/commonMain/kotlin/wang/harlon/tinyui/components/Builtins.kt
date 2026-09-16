@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import wang.harlon.tinyui.components.generated.BuiltinSchemas
@@ -84,10 +83,11 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
         val onClick = { if (scope.has("onClick")) scope.dispatch("onClick") }
         val enabled = scope.get<Boolean>("enabled") ?: true
         val label: @Composable () -> Unit = { Text(scope["text"] ?: "") }
+        val modifier = scope.modifier(clickable = false) // the button owns the click and its enabled state
         when (scope.get<String>("variant")) {
-            "outlined" -> OutlinedButton(onClick = onClick, enabled = enabled, modifier = scope.modifier(), content = { label() })
-            "text" -> TextButton(onClick = onClick, enabled = enabled, modifier = scope.modifier(), content = { label() })
-            else -> Button(onClick = onClick, enabled = enabled, modifier = scope.modifier(), content = { label() })
+            "outlined" -> OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
+            "text" -> TextButton(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
+            else -> Button(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
         }
     }
     register(BuiltinSchemas.TextField) { scope -> TextFieldComponent(scope) }
@@ -148,7 +148,7 @@ private fun TextFieldComponent(scope: NodeScope) {
         keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { commit() }),
         visualTransformation = if (keyboard == KeyboardType.Password) PasswordVisualTransformation() else VisualTransformation.None,
-        modifier = scope.modifier().focusRequester(focusRequester).onFocusChanged { if (!it.isFocused) commit() },
+        modifier = scope.modifier(clickable = false).focusRequester(focusRequester).onFocusChanged { if (!it.isFocused) commit() },
     )
 }
 
@@ -161,19 +161,25 @@ private fun LazyColumnComponent(scope: NodeScope) {
         if (command.name == "scrollTo") state.animateScrollToItem(((command.args["index"] as? Double) ?: 0.0).toInt().coerceIn(0, maxOf(0, node.children.size - 1)))
     }
     if (scope.has("onReachEnd")) {
-        // once per arrival at the last row; arms again only after the list grows or the user scrolls away (docs/native-api.md §6)
+        // fires on each arrival at the last row and when the list grows while there; re-arms once the user scrolls away
         LaunchedEffect(state, node) {
-            var armedFor = -1
-            snapshotFlow { Triple(state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1, node.children.size, state.isScrollInProgress) }
-                .filter { (last, size, _) -> size > 0 && last >= size - 1 }
+            var firedFor = -1
+            snapshotFlow { (state.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1) to node.children.size }
                 .distinctUntilChanged()
-                .collect { (_, size, _) -> if (armedFor != size) { armedFor = size; scope.dispatch("onReachEnd") } }
+                .collect { (last, size) ->
+                    val atEnd = size > 0 && last >= size - 1
+                    if (!atEnd) firedFor = -1
+                    else if (firedFor != size) { firedFor = size; scope.dispatch("onReachEnd") }
+                }
         }
     }
     if (scope.has("onScrollEnd")) {
         LaunchedEffect(state) {
-            snapshotFlow { state.isScrollInProgress }.distinctUntilChanged().filter { !it }
-                .collect { scope.dispatch("onScrollEnd", buildJsonObject { put("index", state.firstVisibleItemIndex) }.toString()) }
+            var scrolling = false
+            snapshotFlow { state.isScrollInProgress }.distinctUntilChanged().collect { now ->
+                if (scrolling && !now) scope.dispatch("onScrollEnd", buildJsonObject { put("index", state.firstVisibleItemIndex) }.toString())
+                scrolling = now
+            }
         }
     }
     val gap = scope.get<Dp>("gap") ?: 0.dp

@@ -9,8 +9,8 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "schema": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/wang/harlon/tinyui/components/generated/BuiltinSchemas.kt --package wang.harlon.tinyui.components.generated",
-    "schema:check": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/wang/harlon/tinyui/components/generated/BuiltinSchemas.kt --package wang.harlon.tinyui.components.generated --check"
+    "schema": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/wang/harlon/tinyui/components/generated/BuiltinSchemas.kt --package wang.harlon.tinyui.components.generated --node-import ../node.ts",
+    "schema:check": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/wang/harlon/tinyui/components/generated/BuiltinSchemas.kt --package wang.harlon.tinyui.components.generated --node-import ../node.ts --check"
   },
   "devDependencies": {
     "typescript": "7.0.2"

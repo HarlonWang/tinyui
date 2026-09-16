@@ -50,7 +50,7 @@ abstract interface wang.harlon.tinyui.schema/NodeScope { // wang.harlon.tinyui.s
     abstract fun RenderChild(wang.harlon.tinyui.node/UiNode, androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui.schema/NodeScope.RenderChild|RenderChild(wang.harlon.tinyui.node.UiNode;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
     abstract fun dispatch(kotlin/String, kotlin/String = ...) // wang.harlon.tinyui.schema/NodeScope.dispatch|dispatch(kotlin.String;kotlin.String){}[0]
     abstract fun has(kotlin/String): kotlin/Boolean // wang.harlon.tinyui.schema/NodeScope.has|has(kotlin.String){}[0]
-    abstract fun modifier(): androidx.compose.ui/Modifier // wang.harlon.tinyui.schema/NodeScope.modifier|modifier(){}[0]
+    abstract fun modifier(kotlin/Boolean = ...): androidx.compose.ui/Modifier // wang.harlon.tinyui.schema/NodeScope.modifier|modifier(kotlin.Boolean){}[0]
 }
 
 abstract interface wang.harlon.tinyui/HttpClient { // wang.harlon.tinyui/HttpClient|null[0]
@@ -79,7 +79,7 @@ abstract interface wang.harlon.tinyui/PageSink { // wang.harlon.tinyui/PageSink|
 
 abstract interface wang.harlon.tinyui/Store { // wang.harlon.tinyui/Store|null[0]
     abstract fun get(kotlin/String): kotlin/String? // wang.harlon.tinyui/Store.get|get(kotlin.String){}[0]
-    abstract fun observe(kotlin/String, kotlin/Function1<kotlin/String, kotlin/Unit>): kotlin/AutoCloseable // wang.harlon.tinyui/Store.observe|observe(kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
+    abstract fun observe(kotlin/String, kotlin/Function1<wang.harlon.tinyui/StoreValue, kotlin/Unit>): kotlin/AutoCloseable // wang.harlon.tinyui/Store.observe|observe(kotlin.String;kotlin.Function1<wang.harlon.tinyui.StoreValue,kotlin.Unit>){}[0]
     abstract fun set(kotlin/String, kotlin/String) // wang.harlon.tinyui/Store.set|set(kotlin.String;kotlin.String){}[0]
 }
 
@@ -222,6 +222,11 @@ final class wang.harlon.tinyui/HostServices { // wang.harlon.tinyui/HostServices
         final fun <get-navigator>(): wang.harlon.tinyui/Navigator // wang.harlon.tinyui/HostServices.navigator.<get-navigator>|<get-navigator>(){}[0]
     final val store // wang.harlon.tinyui/HostServices.store|{}store[0]
         final fun <get-store>(): wang.harlon.tinyui/Store // wang.harlon.tinyui/HostServices.store.<get-store>|<get-store>(){}[0]
+
+    final object Companion { // wang.harlon.tinyui/HostServices.Companion|null[0]
+        final val Default // wang.harlon.tinyui/HostServices.Companion.Default|{}Default[0]
+            final fun <get-Default>(): wang.harlon.tinyui/HostServices // wang.harlon.tinyui/HostServices.Companion.Default.<get-Default>|<get-Default>(){}[0]
+    }
 }
 
 final class wang.harlon.tinyui/HttpRequest { // wang.harlon.tinyui/HttpRequest|null[0]
@@ -252,7 +257,7 @@ final class wang.harlon.tinyui/InMemoryStore : wang.harlon.tinyui/Store { // wan
     constructor <init>() // wang.harlon.tinyui/InMemoryStore.<init>|<init>(){}[0]
 
     final fun get(kotlin/String): kotlin/String? // wang.harlon.tinyui/InMemoryStore.get|get(kotlin.String){}[0]
-    final fun observe(kotlin/String, kotlin/Function1<kotlin/String, kotlin/Unit>): kotlin/AutoCloseable // wang.harlon.tinyui/InMemoryStore.observe|observe(kotlin.String;kotlin.Function1<kotlin.String,kotlin.Unit>){}[0]
+    final fun observe(kotlin/String, kotlin/Function1<wang.harlon.tinyui/StoreValue, kotlin/Unit>): kotlin/AutoCloseable // wang.harlon.tinyui/InMemoryStore.observe|observe(kotlin.String;kotlin.Function1<wang.harlon.tinyui.StoreValue,kotlin.Unit>){}[0]
     final fun set(kotlin/String, kotlin/String) // wang.harlon.tinyui/InMemoryStore.set|set(kotlin.String;kotlin.String){}[0]
 }
 
@@ -299,6 +304,15 @@ final class wang.harlon.tinyui/RuntimeBundle { // wang.harlon.tinyui/RuntimeBund
         final fun <get-core>(): kotlin/ByteArray // wang.harlon.tinyui/RuntimeBundle.core.<get-core>|<get-core>(){}[0]
     final val native // wang.harlon.tinyui/RuntimeBundle.native|{}native[0]
         final fun <get-native>(): kotlin/ByteArray // wang.harlon.tinyui/RuntimeBundle.native.<get-native>|<get-native>(){}[0]
+}
+
+final class wang.harlon.tinyui/StoreValue { // wang.harlon.tinyui/StoreValue|null[0]
+    constructor <init>(kotlin/String, kotlin/Long) // wang.harlon.tinyui/StoreValue.<init>|<init>(kotlin.String;kotlin.Long){}[0]
+
+    final val json // wang.harlon.tinyui/StoreValue.json|{}json[0]
+        final fun <get-json>(): kotlin/String // wang.harlon.tinyui/StoreValue.json.<get-json>|<get-json>(){}[0]
+    final val version // wang.harlon.tinyui/StoreValue.version|{}version[0]
+        final fun <get-version>(): kotlin/Long // wang.harlon.tinyui/StoreValue.version.<get-version>|<get-version>(){}[0]
 }
 
 sealed class wang.harlon.tinyui.schema/PropSpec { // wang.harlon.tinyui.schema/PropSpec|null[0]
@@ -453,6 +467,7 @@ final val wang.harlon.tinyui/wang_harlon_tinyui_Navigator_None$stableprop // wan
 final val wang.harlon.tinyui/wang_harlon_tinyui_PageFailure$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_PageFailure$stableprop|#static{}wang_harlon_tinyui_PageFailure$stableprop[0]
 final val wang.harlon.tinyui/wang_harlon_tinyui_PageHost$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_PageHost$stableprop|#static{}wang_harlon_tinyui_PageHost$stableprop[0]
 final val wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop|#static{}wang_harlon_tinyui_RuntimeBundle$stableprop[0]
+final val wang.harlon.tinyui/wang_harlon_tinyui_StoreValue$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_StoreValue$stableprop|#static{}wang_harlon_tinyui_StoreValue$stableprop[0]
 final val wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop|#static{}wang_harlon_tinyui_TinyUI$stableprop[0]
 
 final fun (wang.harlon.tinyui.schema/ComponentRegistry).wang.harlon.tinyui.components/registerBuiltins(): wang.harlon.tinyui.schema/ComponentRegistry // wang.harlon.tinyui.components/registerBuiltins|registerBuiltins@wang.harlon.tinyui.schema.ComponentRegistry(){}[0]
@@ -489,4 +504,5 @@ final fun wang.harlon.tinyui/wang_harlon_tinyui_Navigator_None$stableprop_getter
 final fun wang.harlon.tinyui/wang_harlon_tinyui_PageFailure$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_PageFailure$stableprop_getter|wang_harlon_tinyui_PageFailure$stableprop_getter(){}[0]
 final fun wang.harlon.tinyui/wang_harlon_tinyui_PageHost$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_PageHost$stableprop_getter|wang_harlon_tinyui_PageHost$stableprop_getter(){}[0]
 final fun wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop_getter|wang_harlon_tinyui_RuntimeBundle$stableprop_getter(){}[0]
+final fun wang.harlon.tinyui/wang_harlon_tinyui_StoreValue$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_StoreValue$stableprop_getter|wang_harlon_tinyui_StoreValue$stableprop_getter(){}[0]
 final fun wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop_getter|wang_harlon_tinyui_TinyUI$stableprop_getter(){}[0]

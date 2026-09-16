@@ -25,7 +25,7 @@ class PageHostTest {
     }
 
     private val core = module("@tiny-ui/core", """
-        let patches = [], count = 0, handler = null, page = null;
+        let patches = [], count = 0, handler = null, page = null, emits = 0;
         globalThis.__tinyui = {
             protocol: 1,
             mount(p, props, host) {
@@ -43,10 +43,10 @@ class PageHostTest {
                 if (event === "onBoom") { try { throw new Error("boom"); } catch (e) { __host_report("E1", JSON.stringify({ entry: "dispatch", message: e.message, stack: e.stack })); } }
                 if (event === "onQuery") patches.push(["p",1,"text", __host_query("store.get", JSON.stringify({ key: "cart" })) + "|" + __host_query("i18n.t", JSON.stringify({ key: "hi" })) + "|" + JSON.parse(__host_query("device.info", "{}")).os]);
                 if (event === "onHttp") __host_call("http.request", 9, JSON.stringify({ method: "GET", url: "/todos" }));
-                if (event === "onSubscribe") { __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); patches.push(["p",1,"text","subscribed"]); }
+                if (event === "onSubscribe") { __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); patches.push(["p",1,"text","subscribed"]); }
                 if (event === "onSet") __host_send("store.set", JSON.stringify({ key: "cart", value: payloadJson }));
             },
-            emit(topic, json) { patches.push(["p",1,"text", topic + " " + json]); },
+            emit(topic, json) { emits++; patches.push(["p",1,"text", topic + " " + json + " #" + emits]); },
             flush() { if (count > 2) throw new Error("render exploded"); if (patches.length) { __host_apply(JSON.stringify(patches)); patches = []; } },
         };
         export const VERSION = "stub";
@@ -130,10 +130,12 @@ class PageHostTest {
         host.dispatch(2, "onSubscribe", "{}")
         host.await { text() == "subscribed" }
         services.events.emit("net", """{"online":false}""")
-        host.await { text() == """net {"online":false}""" }
+        host.await { text() == """net {"online":false} #1""" }
         host.dispatch(2, "onSet", """{"n":3}""")
-        host.await { text() == """store:cart {"value":{"n":3}}""" }
+        host.await { text() == """store:cart {"value":{"n":3}} #2""" }
         assertEquals("""{"n":3}""", store.get("cart"))
+        delay(100)
+        assertEquals("""store:cart {"value":{"n":3}} #2""", text(), "two subscribe calls still deliver each change once")
         host.close()
     }
 

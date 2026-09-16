@@ -19,6 +19,7 @@ schema
   --entry    TS module whose default export is the component list
   --ts       write JSX prop types here
   --kt       write Kotlin schemas here (with --package, optional --object, default BuiltinSchemas)
+  --node-import  where the generated TS imports Node / Ref from (default @tiny-ui/core)
   --check    exit 1 if a target is not already up to date, write nothing
 `;
 
@@ -36,6 +37,7 @@ async function main(argv: string[]): Promise<number> {
             kt: { type: "string" },
             package: { type: "string" },
             object: { type: "string", default: "BuiltinSchemas" },
+            "node-import": { type: "string", default: "@tiny-ui/core" },
             check: { type: "boolean", default: false },
             help: { type: "boolean", short: "h", default: false },
         },
@@ -57,12 +59,13 @@ async function main(argv: string[]): Promise<number> {
     return 0;
 }
 
-async function schema(v: { entry?: string; ts?: string; kt?: string; package?: string; object: string; check: boolean }): Promise<number> {
+async function schema(v: { entry?: string; ts?: string; kt?: string; package?: string; object: string; check: boolean; "node-import": string }): Promise<number> {
     if (!v.entry) throw new Error("schema: --entry is required");
+    if (!v.ts && !v.kt) throw new Error("schema: nothing to generate; pass --ts and/or --kt");
     if (v.kt && !v.package) throw new Error("schema: --kt needs --package");
     const components = await loadSchema(v.entry);
     const targets: { file: string; content: string }[] = [];
-    if (v.ts) targets.push({ file: v.ts, content: generateTs(components) });
+    if (v.ts) targets.push({ file: v.ts, content: generateTs(components, v["node-import"]) });
     if (v.kt) targets.push({ file: v.kt, content: generateKt(components, v.package!, v.object) });
     let stale = 0;
     for (const t of targets) {
