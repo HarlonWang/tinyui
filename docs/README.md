@@ -53,9 +53,11 @@ JS                                   桥                          Kotlin
 |---|---|---|
 | **TinyUI** | 品牌与行文：文档标题、README 首行、日志前缀、对外提及 | 大小写体现 Tiny + UI 两个词 |
 | **tinyui** | 所有机器标识符：GitHub 仓 `HarlonWang/tinyui`、Maven `wang.harlon:tinyui`、Kotlin 包 `wang.harlon.tinyui`、CLI 命令、环境变量前缀 `TINYUI_`、目录名 | 无连字符是唯一在每种标识符里都合法的形态；避开 npm 上他人的 `tiny-ui` React 库 |
-| **@tiny-ui** | 仅 npm scope：`@tiny-ui/core`、`@tiny-ui/ui`、`@tiny-ui/cli` | scope 已归项目所有且不可改名；scope 下包名回到无连字符 |
+| **@tiny-ui** | 仅 npm scope：`@tiny-ui/core`、`@tiny-ui/native`、`@tiny-ui/cli` | scope 已归项目所有且不可改名；scope 下包名回到无连字符 |
 
 npm 裸包 `tinyui` 不可用：npm 防仿冒规则判定其与已有的 `tiny-ui` 过于相似（2026-09-15 实测 E403）。域名 **tinyui.app** 已于 2026-09-15 在 Cloudflare Registrar（个人账号）注册，自动续费 $14.20/年，DNS 在 Cloudflare。
+
+业界对照（2026-09-16 核对 24 个带 UI 的库，仓名 / 包名取自 GitHub API 与各包管理器，品牌拼写取官网 `<title>`）：机器标识符粘连 13 个（headlessui、fluentui、onsenui、gioui、heroui、daisyui、tamagui、nicegui、imgui、egui、baseui、primeng、SwiftUI）、连字符 8 个（material-ui、chakra-ui、radix-ui、semantic-ui、jquery-ui、kendo-ui、element-plus、ant-design）、其余为 `nuxt/ui` 这类单词形。连字符一派集中在老项目，近几年新库几乎都粘连。"品牌分词 `Xxx UI`、标识符粘连 `xxxui`"与本项目完全相同的组合有 Headless UI、Fluent UI、Onsen UI、Gio UI 四例；品牌与标识符脱钩更是常态（Material UI ↔ `@mui`，Base Web ↔ `baseweb` 仓 ↔ `baseui` 包），所以 npm scope 单独带连字符不算异类。
 
 ## 仓库结构
 
