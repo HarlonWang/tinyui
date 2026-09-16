@@ -36,7 +36,15 @@ importers:
 
   packages/core: {}
 
-  packages/native: {}
+  packages/native:
+    dependencies:
+      '@tiny-ui/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 22.20.3
 
   sample/js:
     dependencies:
@@ -50,6 +58,12 @@ importers:
       '@tiny-ui/cli':
         specifier: workspace:*
         version: link:../../packages/cli
+
+  schema:
+    devDependencies:
+      '@tiny-ui/cli':
+        specifier: workspace:*
+        version: link:../packages/cli
 
 packages:
 

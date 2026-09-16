@@ -69,6 +69,11 @@ val collectTinyUIResources by tasks.registering(Sync::class) {
     into(layout.buildDirectory.dir("tinyui-resources/files/tinyui"))
 }
 
+// Compose's assets copy never deletes what an earlier build produced: a removed page would stay in the APK
+tasks.matching { it.name.startsWith("copy") && it.name.endsWith("ComposeResourcesToAndroidAssets") }.configureEach {
+    doFirst { outputs.files.forEach { it.deleteRecursively() } }
+}
+
 compose.resources {
     packageOfResClass = "wang.harlon.tinyui.sample.res"
     customDirectory("commonMain", layout.dir(collectTinyUIResources.map { it.destinationDir.parentFile.parentFile }))

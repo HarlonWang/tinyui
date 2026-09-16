@@ -26,12 +26,13 @@ class PatchProblem(val op: String, val reason: String) {
  * (docs/adr-003-kotlin-node-tree-and-registry.md §3.2). Op semantics: docs/patch-protocol.md.
  */
 class NodeTree(private val registry: ComponentRegistry, private val report: (PatchProblem) -> Unit) {
-    val root = UiNode(ROOT_ID, "root")
-    private val nodes = HashMap<Int, UiNode>().apply { put(ROOT_ID, root) }
+    val root = UINode(ROOT_ID, "root")
+    private val nodes = HashMap<Int, UINode>().apply { put(ROOT_ID, root) }
+    private val born = ArrayList<UINode>()
 
     val size: Int get() = nodes.size
 
-    fun node(id: Int): UiNode? = nodes[id]
+    fun node(id: Int): UINode? = nodes[id]
 
     /** Applies one flush atomically: other threads see the tree before or after, never in between. */
     fun apply(json: String) {
@@ -43,6 +44,13 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         }
         Snapshot.withMutableSnapshot {
             for (op in ops) applyOp(op)
+            for (node in born) {
+                node.created = true
+                registry.schema(node.type)?.props?.forEach { (key, spec) ->
+                    if (spec.required && node.props[key] == null) report(PatchProblem("[\"c\",${node.id},\"${node.type}\"]", "required prop $key was not set in the creating flush"))
+                }
+            }
+            born.clear()
         }
     }
 
@@ -70,9 +78,9 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         val id = f.int(1) ?: return report(PatchProblem(op.toString(), "c without id"))
         val type = f.string(2) ?: return report(PatchProblem(op.toString(), "c without type"))
         if (nodes.containsKey(id)) return report(PatchProblem(op.toString(), "id already exists"))
-        val known = registry.schema(type) != null
-        if (!known) report(PatchProblem(op.toString(), "unknown component type, rendering Placeholder"))
-        nodes[id] = UiNode(id, if (known) type else ComponentRegistry.PLACEHOLDER)
+        // the requested type stays on the node: Render falls back to Placeholder, which shows it in debug
+        if (registry.schema(type) == null) report(PatchProblem(op.toString(), "unknown component type, rendering Placeholder"))
+        nodes[id] = UINode(id, type).also { born += it }
     }
 
     private fun setProp(f: JsonArray, op: JsonElement) {
@@ -86,8 +94,10 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             if (flag) node.events[key] = true else node.events.remove(key)
             return
         }
-        val spec = schema.props[key] ?: return report(PatchProblem(op.toString(), "prop not in schema of ${node.type}"))
+        val spec = schema.prop(key) ?: return report(PatchProblem(op.toString(), "prop not in schema of ${node.type}"))
+        if (spec.initial && node.created) return report(PatchProblem(op.toString(), "$key is an initial prop of ${node.type}: writes after creation are ignored"))
         if (value is JsonNull) {
+            if (spec.required && spec.default == null) return report(PatchProblem(op.toString(), "$key is required on ${node.type}; null is not allowed"))
             node.props[key] = spec.default
             return
         }
@@ -123,15 +133,15 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     }
 
     /** Ops that act on a node as a child never target the root container. */
-    private fun child(f: JsonArray, op: JsonElement, at: Int = 2): UiNode? {
+    private fun child(f: JsonArray, op: JsonElement, at: Int = 2): UINode? {
         val id = f.int(at) ?: run { report(PatchProblem(op.toString(), "op without node id")); return null }
         val node = nodes[id] ?: run { report(PatchProblem(op.toString(), "unknown node $id")); return null }
         if (node.id == ROOT_ID) { report(PatchProblem(op.toString(), "the root container is not a child")); return null }
         return node
     }
 
-    private fun isAncestor(node: UiNode, of: UiNode): Boolean {
-        var n: UiNode? = of.parent
+    private fun isAncestor(node: UINode, of: UINode): Boolean {
+        var n: UINode? = of.parent
         while (n != null) { if (n === node) return true; n = n.parent }
         return false
     }
@@ -140,12 +150,18 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         val node = child(f, op, at = 1) ?: return
         val name = f.string(2) ?: return report(PatchProblem(op.toString(), "x without name"))
         val schema = registry.schema(node.type) ?: return
-        if (name !in schema.commands) return report(PatchProblem(op.toString(), "command not in schema of ${node.type}"))
-        val args = (f.getOrNull(3) as? JsonObject)?.mapValues { (_, v) -> (v as? JsonPrimitive)?.scalar() } ?: emptyMap()
+        val fields = schema.commands[name] ?: return report(PatchProblem(op.toString(), "command not in schema of ${node.type}"))
+        val given = f.getOrNull(3) as? JsonObject ?: JsonObject(emptyMap())
+        val args = HashMap<String, Any?>()
+        for ((field, spec) in fields) {
+            val v = given[field] as? JsonPrimitive ?: return report(PatchProblem(op.toString(), "command $name needs $field"))
+            if (!spec.accepts(v)) return report(PatchProblem(op.toString(), "command $name: $field must be $spec"))
+            args[field] = v.scalar()
+        }
         node.commands.add(Command(name, args))
     }
 
-    private fun forget(node: UiNode) {
+    private fun forget(node: UINode) {
         nodes.remove(node.id)
         for (child in node.children) forget(child)
     }

@@ -1,0 +1,12 @@
+import { defineComponent, dp, enumOf } from "@tiny-ui/cli/schema";
+
+export default defineComponent("Row", {
+    doc: "Horizontal stack.",
+    props: {
+        gap: dp({ default: 0, doc: "space between children" }),
+        align: enumOf(["start", "center", "end"], { default: "start", doc: "cross axis" }),
+        justify: enumOf(["start", "center", "end", "spaceBetween"], { default: "start", doc: "main axis" }),
+    },
+    events: { onClick: {} },
+    children: true,
+});

@@ -29,13 +29,13 @@
 | JS 运行时 API：`signal` / `memo` / `effect` / `onCleanup` / `For` / `Show` / `ref` + `cmd` / **`createResource`**；"组件函数必须同步"规则；J3 / K3 用原生 Promise | ADR-001 / 004 / 005 | 已定（2026-09-16，[js-runtime.html](./js-runtime.html) + [runtime-api.md](./runtime-api.md)） |
 | CLI 的 JSX 变换：自动 thunk（Solid 式 getter 包裹）、source map 输出 | ADR-005 | 已定（2026-09-16，[jsx-transform.md](./jsx-transform.md)） |
 | patch 协议：六种 op、JSON 形态、是否带协议版本号 | ADR-001 / 002 / 004 | 已定（2026-09-16，[patch-protocol.md](./patch-protocol.md)） |
-| schema DSL 形态 + 由 schema 生成 TS 类型定义的工具链 | ADR-003 | 待开 |
-| 公共布局 prop 清单与 `Modifier` 合成顺序 | ADR-003 | 待开 |
-| 内置组件集首批（`Column` / `Row` / `Box` / `Text` / `Image` / `Button` / `TextField` / `LazyColumn` / `Spacer`）及各自 prop / 事件 / 命令清单 | ADR-003 / 004 | 待开 |
-| J2 白名单清单与注册方式 | ADR-002 | 待开 |
-| `@tiny-ui/native` 的 `navigation` / `store` / `events` API 面与 `Navigator` 接口（[app-model.md](./app-model.md)）；`push` 的 Promise 糖做不做 | app-model.md | 待开 |
-| E3 错误 code 表、K 入口超时阈值、连续事件节流阈值 | ADR-002 / 004 | 待开 |
-| `Placeholder` 在 release 的表现 | ADR-003 | 待开 |
+| schema DSL 形态 + 由 schema 生成 TS 类型定义的工具链 | ADR-003 | 已定（[components.md](./components.md) §1，`tinyui schema`） |
+| 公共布局 prop 清单与 `Modifier` 合成顺序 | ADR-003 | 已定（components.md §2） |
+| 内置组件集首批（`Column` / `Row` / `Box` / `Text` / `Image` / `Button` / `TextField` / `LazyColumn` / `Spacer`）及各自 prop / 事件 / 命令清单 | ADR-003 / 004 | 已定（components.md §3）；`Image` 推迟到图片加载管线选型 |
+| J2 白名单清单与注册方式 | ADR-002 | 已定（[native-api.md](./native-api.md) §1） |
+| `@tiny-ui/native` 的 `navigation` / `store` / `events` API 面与 `Navigator` 接口（[app-model.md](./app-model.md)）；`push` 的 Promise 糖做不做 | app-model.md | 已定（native-api.md §2–§5；Promise 糖不做） |
+| E3 错误 code 表、K 入口超时阈值、连续事件节流阈值 | ADR-002 / 004 | 已定（native-api.md §6） |
+| `Placeholder` 在 release 的表现 | ADR-003 | 已定（components.md §5：零尺寸空 Box） |
 
 ## D. 明确推迟（记录不做，触发条件写清）
 
@@ -53,6 +53,8 @@
 | 返回栈深页引擎回收策略 | ADR-002 | 真机内存数据出来后定，可能提前 |
 | 应用级服务 Runtime（不挂 UI、随 App 生命周期的引擎） | app-model.md | 业务出现不属于任何页面的常驻 JS 逻辑 |
 | 手势组合内置组件 | ADR-004 | 业务需求出现 |
+| `Image` 与图片加载管线（coil3 vs 宿主 loader） | components.md §3 | 出现需要图片的页面 |
+| `weight` / `alignSelf` 等需要父作用域的布局 prop | components.md §2 | `Row` / `Column` 里按比例分配的需求 |
 
 ## 建议顺序与里程碑
 
@@ -60,4 +62,4 @@
 2. **B 前三项并行**——半天到一天的实验，结果决定 C 里几个数值和 ADR-003 的退路
 3. **C 前三项定稿**（运行时 API、patch 协议、schema DSL）——两侧代码的契约，定了才能分头写
 4. ~~**M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干~~ 已完成（PR #3，2026-09-16）：`@tiny-ui/core` 运行时（30 测试）、CLI JSX 变换（19 测试）、compose 节点表 / schema DSL / 注册表 / `PageHost` / `TinyUIPage`（9 测试），Counter 在 Android 与 iOS 模拟器上跑通。顺带修了 quickjs-kmp 的字节码注册入口不刷新栈顶的 bug（quickjs-kmp PR #12），**真机需要 quickjs-kmp ≥ 0.1.1**，发版后 bump catalog
-5. **C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入
+5. ~~**C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入~~ 已完成（PR #4，2026-09-16）：schema 生成链、八个内置组件、`HostServices`、`@tiny-ui/native`；todos 页在 Android 与 iOS 模拟器上跑通输入提交、行增删改、命令滚动、分页
