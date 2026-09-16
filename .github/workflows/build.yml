@@ -6,6 +6,7 @@ on:
   pull_request:
 
 jobs:
+  # PR 门禁只跑 Android 与 host 测试 + klib ABI 检查；iOS 的 framework 链接与模拟器测试在 ios.yml（tag / 手动）
   gradle:
     runs-on: macos-15
     steps:
@@ -15,7 +16,7 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@v5
-      - run: ./gradlew build --no-daemon
+      - run: ./gradlew :compose:testAndroidHostTest :compose:apiCheck :sample:androidApp:assembleDebug --no-daemon
 
   pnpm:
     runs-on: ubuntu-latest
