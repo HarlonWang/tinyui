@@ -106,11 +106,12 @@ class PageHost(
     fun reject(cbId: Int, errorJson: String) = entry("reject", JsValue.Num(cbId), JsValue.Str(errorJson))
     fun emit(topic: String, payloadJson: String) = entry("emit", JsValue.Str(topic), JsValue.Str(payloadJson))
 
-    private fun entry(name: String, vararg args: JsValue) {
+    private fun entry(name: String, vararg args: JsValue, before: () -> Unit = {}) {
         if (failure != null) return
         scope.launch {
             try {
                 runtime.withEngine {
+                    before()
                     val e = entries ?: return@withEngine
                     e.call(name, *args)
                     e.call("flush")
@@ -122,10 +123,8 @@ class PageHost(
     }
 
     fun close() {
-        scope.cancel()
+        scope.cancel() // pending entries and timers are its children
         tree.clear()
-        timers.values.forEach { it.cancel() }
-        timers.clear()
         // not a child of `scope`: cancelling the page must not cancel its own teardown
         CoroutineScope(Dispatchers.Default).launch {
             try {
@@ -183,20 +182,23 @@ class PageHost(
             val name = (args[0] as JsValue.Str).value
             val argsJson = (args[1] as JsValue.Str).value
             if (name == "timer.cancel") {
-                val cbId = Json.parseToJsonElement(argsJson).jsonObject["cbId"]?.jsonPrimitive?.intOrNull
-                timers.remove(cbId)?.cancel()
+                val cbId = runCatching { Json.parseToJsonElement(argsJson).jsonObject["cbId"]?.jsonPrimitive?.intOrNull }.getOrNull()
+                if (cbId != null) timers.remove(cbId)?.cancel()
             }
             JsValue.Undefined
         }
     }
 
-    /** The host side of `setTimeout` (J3 `timer.schedule` → K3 `resolve`); dies with the page. */
+    /**
+     * The host side of `setTimeout` (J3 `timer.schedule` → K3 `resolve`); dies with the page.
+     * [timers] is only touched while holding the runtime lock: here and in `__host_send` (host functions
+     * run inside the calling entry) and in the `before` step of the firing entry.
+     */
     private fun schedule(cbId: Int, argsJson: String) {
         val ms = runCatching { Json.parseToJsonElement(argsJson).jsonObject["ms"]?.jsonPrimitive?.doubleOrNull }.getOrNull() ?: 0.0
         timers[cbId] = scope.launch {
             delay(ms.toLong().coerceAtLeast(0))
-            timers.remove(cbId)
-            resolve(cbId, "")
+            entry("resolve", JsValue.Num(cbId), JsValue.Str(""), before = { timers.remove(cbId) })
         }
     }
 
