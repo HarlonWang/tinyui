@@ -9,15 +9,15 @@
 | 框架命名与建仓 | 命名 TinyUI、域名 tinyui.app、仓 `HarlonWang/tinyui` 均已定 | 已定 |
 | 仓库结构 | 已定单仓，目录见 README"仓库结构"一节 | 已定 |
 | 构建链骨架 | Gradle（build-logic / compose / sample 含 iOS 壳）+ pnpm workspace（core / native / cli）+ CI（PR 门禁 Android / host / apiCheck，iOS 全量在 ios.yml tag / 手动）；quickjs-kmp 本地 composite、CI 走 Central | 已完成（PR #1，2026-09-16） |
-| **quickjs-kmp** | 新建 SDK 接入 QuickJS（ADR-005），复制 mquickjs-kmp 骨架，API 同形；M1 shim + 三端构建，M2 句柄表 + Runtime + 微任务 + **ESM 模块表**，M3 字节码 + 宿主编译工具 + 发布。TinyUI 的 `compose/` 依赖它 | 待开，**A 组内优先级最高** |
-| 构建链打通 | CLI：TSX → `h()`（ES2025）→ 每页一个 ESM 模块字节码，`external: ["@tiny-ui/*"]`；运行时两个模块字节码内置 | 待开，依赖 quickjs-kmp M3 |
+| **quickjs-kmp** | 新建 SDK 接入 QuickJS（ADR-005），复制 mquickjs-kmp 骨架，API 同形；M1 shim + 三端构建，M2 句柄表 + Runtime + 微任务 + **ESM 模块表**，M3 字节码 + 宿主编译工具 + 发布。TinyUI 的 `compose/` 依赖它 | 已完成（M1～M3，`wang.harlon:quickjs-kmp:0.1.0` 2026-09-16 发 Central；桥形验收见 `bench/results/2026-09-16-quickjs-kmp.md`） |
+| 构建链打通 | CLI：TSX → `h()`（ES2025）→ 每页一个 ESM 模块字节码，`external: ["@tiny-ui/*"]`；运行时两个模块字节码内置 | 待开 |
 
 ## B. 验证实验（数据驱动，互相独立，可并行）
 
 | 项 | 来源 | 为什么要早做 | 状态 |
 |---|---|---|---|
-| 真机比值：Signal bench 在 Android / iOS 跑一遍（QuickJS） | ADR-001 / 005 | 所有性能判断都基于 macOS 数字，真机慢几倍要知道 | 待开，依赖 quickjs-kmp |
-| Runtime 创建 + 运行时模块 + 页面模块加载耗时；Runtime 基线内存 | ADR-002 / 005 | 决定"每页一 Runtime"的进页延迟与返回栈深度 | 待开，依赖 quickjs-kmp |
+| 真机比值：Signal bench 在 Android / iOS 跑一遍（QuickJS） | ADR-001 / 005 | 所有性能判断都基于 macOS 数字，真机慢几倍要知道 | 待开 |
+| Runtime 创建 + 运行时模块 + 页面模块加载耗时；Runtime 基线内存 | ADR-002 / 005 | 决定"每页一 Runtime"的进页延迟与返回栈深度 | 待开 |
 | JS 线程写快照 vs 主线程重组的锁争用 | ADR-003 | 有问题要退回 op 列表投主线程，越早知道改动越小 | 待开 |
 | "一行一个 effect"内存优化 | ADR-001 | 非阻塞，可最后做 | 待开 |
 
@@ -40,7 +40,7 @@
 | 项 | 来源 | 触发条件 |
 |---|---|---|
 | `createStore`（Solid 式 Proxy 深层响应式） | ADR-005 | **v1.1 计划内**：M2 列表页跑通后做 |
-| 热下发（Kotlin 回调式 module loader、页面包分发与版本兼容） | ADR-005 | 内核稳定后另立 ADR |
+| 热下发（页面包分发与版本兼容；引擎侧 Kotlin 回调式 module loader 已在 quickjs-kmp 完成，`JsEngineConfig.moduleLoader`） | ADR-005 | 内核稳定后另立 ADR |
 | 向 bellard/mquickjs 上报 S4 段错误 | ADR-005 §3.2 | 用户决定 |
 | `ErrorBoundary` 分支级兜底 | ADR-002 | 整页失败的比例成为问题 |
 | 二进制编码路径 | ADR-002 | 真机 profiling 证明 Kotlin 解析占主导 |
