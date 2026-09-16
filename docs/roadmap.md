@@ -32,6 +32,7 @@
 | 公共布局 prop 清单与 `Modifier` 合成顺序 | ADR-003 | 待开 |
 | 内置组件集首批（`Column` / `Row` / `Box` / `Text` / `Image` / `Button` / `TextField` / `LazyColumn` / `Spacer`）及各自 prop / 事件 / 命令清单 | ADR-003 / 004 | 待开 |
 | J2 白名单清单与注册方式 | ADR-002 | 待开 |
+| `@tiny-ui/native` 的 `navigation` / `store` / `events` API 面与 `Navigator` 接口（[app-model.md](./app-model.md)）；`push` 的 Promise 糖做不做 | app-model.md | 待开 |
 | E3 错误 code 表、K 入口超时阈值、连续事件节流阈值 | ADR-002 / 004 | 待开 |
 | `Placeholder` 在 release 的表现 | ADR-003 | 待开 |
 
@@ -49,6 +50,7 @@
 | 命令回执（`cmd()` 返回 Promise） | ADR-004 | 出现必须知道结果的命令 |
 | 窗口化 `For` | ADR-003 | 出现万行级列表需求 |
 | 返回栈深页引擎回收策略 | ADR-002 | 真机内存数据出来后定，可能提前 |
+| 应用级服务 Runtime（不挂 UI、随 App 生命周期的引擎） | app-model.md | 业务出现不属于任何页面的常驻 JS 逻辑 |
 | 手势组合内置组件 | ADR-004 | 业务需求出现 |
 
 ## 建议顺序与里程碑

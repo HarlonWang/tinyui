@@ -99,6 +99,7 @@ tinyui/
 | 文件 | 主题 | 状态 |
 |---|---|---|
 | [build-chain.md](./build-chain.md) | 构建链：TSX → ESM 模块字节码，esbuild 选型，字节码由 CLI 经 `qjsc-kmp` 生成 | 方案已定（2026-09-16），实施中 |
+| [app-model.md](./app-model.md) | 应用模型：路由、生命周期、跨页状态在 Kotlin；页面之间经 Kotlin 中转的四种通信 | 已对齐（2026-09-16），API 面归 C 组 |
 
 ## 下一阶段
 
