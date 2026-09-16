@@ -16,6 +16,19 @@ jobs:
           distribution: temurin
           java-version: 25
       - uses: gradle/actions/setup-gradle@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: quickjs-kmp host tools (qjsc-kmp for bytecode, host JNI for Android host tests)
+        run: |
+          version=$(sed -n 's/^quickjsKmp = "\(.*\)"/\1/p' gradle/libs.versions.toml)
+          git clone --depth 1 --branch "$version" https://github.com/HarlonWang/quickjs-kmp.git "$RUNNER_TEMP/quickjs-kmp"
+          (cd "$RUNNER_TEMP/quickjs-kmp" && ./gradlew :library:buildHostTools :library:buildNativeHostJni --no-daemon)
+          echo "TINYUI_QJSC=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-tools/bin/qjsc-kmp" >> "$GITHUB_ENV"
+          echo "TINYUI_QUICKJS_HOST_JNI=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-jni/lib" >> "$GITHUB_ENV"
       - run: ./gradlew :compose:testAndroidHostTest :compose:apiCheck :sample:androidApp:assembleDebug --no-daemon
 
   pnpm:
@@ -29,4 +42,5 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - run: pnpm typecheck
       - run: pnpm test

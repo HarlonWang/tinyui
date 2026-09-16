@@ -4,12 +4,34 @@
   "description": "TinyUI build tool: TSX -> h() (ES2025) -> ESM module bytecode.",
   "license": "MIT",
   "type": "module",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
-  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test --experimental-strip-types 'test/**/*.test.ts'"
+    "test": "node --test 'test/**/*.test.ts'"
   },
-  "repository": { "type": "git", "url": "git+https://github.com/HarlonWang/tinyui.git", "directory": "packages/cli" }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HarlonWang/tinyui.git",
+    "directory": "packages/cli"
+  },
+  "bin": {
+    "tinyui": "./dist/bin.js"
+  },
+  "dependencies": {
+    "esbuild": "0.28.2"
+  },
+  "devDependencies": {
+    "@tiny-ui/core": "workspace:*",
+    "@tiny-ui/native": "workspace:*",
+    "@types/node": "latest"
+  }
 }

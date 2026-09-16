@@ -30,6 +30,8 @@ val localProperties = file("local.properties").takeIf { it.exists() }?.let { f -
 localProperties?.getProperty("quickjs-kmp.dir")?.let { dir ->
     val sdkDir = file(dir)
     require(sdkDir.isDirectory) { "quickjs-kmp.dir 不存在: $sdkDir" }
+    // 构建脚本据此取该仓的宿主产物（qjsc-kmp、host JNI 库）
+    gradle.extra["quickjs-kmp.dir"] = sdkDir
     includeBuild(sdkDir) {
         dependencySubstitution {
             sdkDir.resolve("gradle/composite-substitutions").readLines()

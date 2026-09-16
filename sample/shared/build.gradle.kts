@@ -7,6 +7,8 @@ plugins {
 kotlin {
     android {
         namespace = "wang.harlon.tinyui.sample.shared"
+        // AGP 的 KMP 库插件默认不处理 res / assets，Compose resources 在 Android 走 assets，必须打开
+        androidResources { enable = true }
     }
 
     listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
@@ -23,6 +25,51 @@ kotlin {
             implementation(compose.foundation)
             implementation(compose.material3)
             implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(libs.kotlinx.coroutines.core)
         }
     }
+}
+
+// JS 侧：pnpm 编三个包 → tinyui build 把 sample/js 的页面与运行时模块编成字节码 → 只把 .bin 与清单打成 Compose 资源
+val jsRoot = rootDir.resolve("sample/js")
+val cliOut = layout.buildDirectory.dir("tinyui-cli")
+val quickjsKmpDir = (gradle as ExtensionAware).extra.properties["quickjs-kmp.dir"] as File?
+val qjsc: Provider<String> = providers.gradleProperty("tinyui.qjsc")
+    .orElse(providers.environmentVariable("TINYUI_QJSC"))
+    .orElse(providers.provider { quickjsKmpDir?.resolve("library/build/native/host-tools/bin/qjsc-kmp")?.absolutePath })
+
+val buildJsPackages by tasks.registering(Exec::class) {
+    group = "build"
+    description = "pnpm build for packages/*"
+    workingDir = rootDir
+    commandLine("pnpm", "run", "build")
+    inputs.files(fileTree(rootDir.resolve("packages")) { include("*/src/**", "*/package.json", "*/tsconfig.json") })
+    inputs.file(rootDir.resolve("tsconfig.base.json"))
+    outputs.dirs(rootDir.resolve("packages/core/dist"), rootDir.resolve("packages/native/dist"), rootDir.resolve("packages/cli/dist"))
+}
+
+val buildTinyUIPages by tasks.registering(Exec::class) {
+    group = "build"
+    description = "tinyui build for sample/js"
+    dependsOn(buildJsPackages)
+    if (quickjsKmpDir != null) dependsOn(gradle.includedBuild("quickjs-kmp").task(":library:buildHostTools"))
+    workingDir = jsRoot
+    inputs.dir(jsRoot.resolve("src"))
+    inputs.files(buildJsPackages.map { it.outputs.files })
+    inputs.property("qjsc", qjsc.orElse(""))
+    outputs.dir(cliOut)
+    val args = mutableListOf("node", rootDir.resolve("packages/cli/dist/bin.js").path, "build", "--root", jsRoot.path, "--out", cliOut.get().asFile.path)
+    qjsc.orNull?.let { args += listOf("--qjsc", it) }
+    commandLine(args)
+}
+
+val collectTinyUIResources by tasks.registering(Sync::class) {
+    from(buildTinyUIPages) { include("**/*.bin", "manifest.json") }
+    into(layout.buildDirectory.dir("tinyui-resources/files/tinyui"))
+}
+
+compose.resources {
+    packageOfResClass = "wang.harlon.tinyui.sample.res"
+    customDirectory("commonMain", layout.dir(collectTinyUIResources.map { it.destinationDir.parentFile.parentFile }))
 }

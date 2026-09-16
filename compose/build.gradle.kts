@@ -62,3 +62,13 @@ mavenPublishing {
 apiValidation {
     klib { enabled = true }
 }
+
+// Android host test 要加载宿主编译的 libquickjs_kmp：composite 时取 quickjs-kmp 的 buildNativeHostJni 产物，
+// 否则读 TINYUI_QUICKJS_HOST_JNI（CI 从 quickjs-kmp 源码现编，见 .github/workflows/build.yml）
+val quickjsKmpDir = (gradle as ExtensionAware).extra.properties["quickjs-kmp.dir"] as File?
+val hostJniDir: Provider<String> = providers.environmentVariable("TINYUI_QUICKJS_HOST_JNI")
+    .orElse(providers.provider { quickjsKmpDir?.resolve("library/build/native/host-jni/lib")?.absolutePath })
+tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEach {
+    if (quickjsKmpDir != null) dependsOn(gradle.includedBuild("quickjs-kmp").task(":library:buildNativeHostJni"))
+    hostJniDir.orNull?.let { systemProperty("java.library.path", it) }
+}
