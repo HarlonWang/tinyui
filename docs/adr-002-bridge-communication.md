@@ -96,7 +96,7 @@ B 定了之后此块是推论：**一次 K 入口 = 一个事务 = 恰好一次 
 - 同一事务内的状态变化在 flush 时合并（ADR-001 已定）
 - 多个 K 入口密集到达（一帧内三个网络回调）→ 三个事务、三条 patch 消息，按序回主线程各自 `withMutableSnapshot` 应用。不在 JS 侧或队列里合并：Compose 本身按帧合并重组，三次快照写入同一帧只触发一次重组，合并已经免费拿到
 - 事务是原子的：flush 没跑完的事务一条 patch 都不发，Kotlin 不会拿到半棵树
-- 大事务（挂载 1000 行、209 KB）不拆：拆了用户会看到半渲染列表，且 bench 表明这个量级一次过桥没问题
+- 大事务（挂载 1000 行、209 KB）不拆：拆了用户会看到半渲染列表，且 bench 表明这个量级一次过桥没问题（2026-09-16 经 quickjs-kmp 实测：过桥 1.2 ms，加 kotlinx 建树解析 4.4 ms，见 [bench/results/2026-09-16-quickjs-kmp.md](../bench/results/2026-09-16-quickjs-kmp.md)）
 
 ### 3.4 跨界标识
 
@@ -145,7 +145,7 @@ E1 选 React 式（不回滚 signal、照常 flush）而非丢弃整个事务：
 
 ### 3.6 序列化
 
-调用模型定了之后此块是推论。bench 量级：1000 行挂载 10006 条 patch、209 KB JSON，JS 侧含构造 + 序列化 5.8 ms；单条更新 + flush 约 1 µs。`JSON.stringify` 在 mquickjs 里是 C 实现，是 JS 侧能产出的最便宜的东西。
+调用模型定了之后此块是推论。bench 量级：1000 行挂载 10006 条 patch、209 KB JSON，JS 侧含构造 + 序列化 5.8 ms；单条更新 + flush 约 1 µs。`JSON.stringify` 在 mquickjs 里是 C 实现，是 JS 侧能产出的最便宜的东西。2026-09-16 经 quickjs-kmp 实测的 Kotlin 侧成本（[bench/results/2026-09-16-quickjs-kmp.md](../bench/results/2026-09-16-quickjs-kmp.md)）：过桥本身约 6 µs/KB，kotlinx `parseToJsonElement` 建树约 15～20 µs/KB，解析比过桥贵 1.5～2.5 倍，是 ADR-003 流式写节点表要省掉的那一层。
 
 | 方案 | JS 侧 | 过桥 | Kotlin 侧 | 判断 |
 |---|---|---|---|---|
