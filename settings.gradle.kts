@@ -33,6 +33,7 @@ localProperties?.getProperty("quickjs-kmp.dir")?.let { dir ->
     // 构建脚本据此取该仓的宿主产物（qjsc-kmp、host JNI 库）
     gradle.extra["quickjs-kmp.dir"] = sdkDir
     includeBuild(sdkDir) {
+        name = "quickjs-kmp" // 构建脚本按这个名字引用它的任务，不依赖目录名
         dependencySubstitution {
             sdkDir.resolve("gradle/composite-substitutions").readLines()
                 .map { it.substringBefore('#').trim() }

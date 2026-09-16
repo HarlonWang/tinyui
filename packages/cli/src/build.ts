@@ -1,7 +1,8 @@
 import { build as esbuild, type Plugin } from "esbuild";
-import { mkdir, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { compileModule, findQjsc } from "./qjsc.ts";
+import { TransformError, transformJsx } from "./transform.ts";
 
 export const RUNTIME_MODULES = ["@tiny-ui/core", "@tiny-ui/native"] as const;
 
@@ -47,6 +48,9 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
         throw new Error("qjsc-kmp not found: pass --qjsc, set TINYUI_QJSC, or put it on PATH (or use --js-only)");
     }
 
+    // stale outputs would otherwise be packaged along with the current pages
+    await rm(join(out, "pages"), { recursive: true, force: true });
+    await rm(join(out, "runtime"), { recursive: true, force: true });
     const runtime = await bundleRuntime(root, out);
     const pages = await bundlePages(root, out, pageNames);
     if (qjsc) {
@@ -104,6 +108,8 @@ async function bundlePages(root: string, out: string, pages: Map<string, string>
         entryPoints: [...pages].map(([name, file]) => ({ in: file, out: name.slice("pages/".length) })),
         outdir,
         outbase: join(root, "src", "pages"),
+        // the project's tsconfig says react-jsx for type checking; the output is classic h() regardless
+        tsconfigRaw: { compilerOptions: { jsx: "react", jsxFactory: "h", jsxFragmentFactory: "Fragment" } },
         jsx: "transform",
         jsxFactory: "h",
         jsxFragment: "Fragment",
@@ -117,6 +123,7 @@ async function bundlePages(root: string, out: string, pages: Map<string, string>
 }
 
 const JSX_SHIM = "tinyui:jsx-shim";
+const TSX = /\.tsx$/;
 
 /** `inject` wants a module; this serves one in memory so pages get `h` / `Fragment` from the runtime module. */
 const pagePlugin: Plugin = {
@@ -126,9 +133,23 @@ const pagePlugin: Plugin = {
         // Runtime modules stay bare specifiers and are pure, so a page that never uses JSX keeps no import of h
         api.onResolve({ filter: /^@tiny-ui\// }, (args) => ({ path: args.path, external: true, sideEffects: false }));
         api.onLoad({ filter: /.*/, namespace: "tinyui" }, () => ({
-            contents: 'export { h, Fragment } from "@tiny-ui/core";',
+            contents: 'export { h, Fragment, thunk } from "@tiny-ui/core";',
             loader: "js",
         }));
+        // docs/jsx-transform.md: wrap dynamic attributes before esbuild turns JSX into h()
+        api.onLoad({ filter: TSX }, async (args) => {
+            const source = await readFile(args.path, "utf8");
+            try {
+                const { code, map } = transformJsx(relative(api.initialOptions.absWorkingDir ?? "", args.path), source);
+                const inline = Buffer.from(map).toString("base64");
+                return { contents: `${code}\n//# sourceMappingURL=data:application/json;base64,${inline}`, loader: "tsx" };
+            } catch (e) {
+                if (e instanceof TransformError) {
+                    return { errors: [{ text: e.message.slice(e.message.indexOf(": ") + 2), location: { file: args.path, line: e.line, column: e.column - 1 } }] };
+                }
+                throw e;
+            }
+        });
     },
 };
 

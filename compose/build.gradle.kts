@@ -71,4 +71,6 @@ val hostJniDir: Provider<String> = providers.environmentVariable("TINYUI_QUICKJS
 tasks.withType<Test>().matching { it.name == "testAndroidHostTest" }.configureEach {
     if (quickjsKmpDir != null) dependsOn(gradle.includedBuild("quickjs-kmp").task(":library:buildNativeHostJni"))
     hostJniDir.orNull?.let { systemProperty("java.library.path", it) }
+    // BundleSmokeTest loads the sample's bytecode when it exists: never a stale one from before a rebuild in the same run
+    mustRunAfter(":sample:shared:buildTinyUIPages")
 }

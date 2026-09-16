@@ -27,9 +27,16 @@ describe("tinyui build", () => {
 
     it("turns JSX into h() calls with the factory imported from @tiny-ui/core", async () => {
         const js = await readFile(join(out, "pages", "home.js"), "utf8");
-        assert.match(js, /import \{ h, Fragment \} from "@tiny-ui\/core"/);
+        assert.match(js, /import \{ h, Fragment, thunk \} from "@tiny-ui\/core"/);
         assert.match(js, /h\(Column, null, .*h\(Text, \{ text: label \}\)/s);
+        assert.match(js, /h\(Text, \{ text: thunk\(\(\) => title\(name\)\) \}\)/, "call expressions are wrapped");
         assert.doesNotMatch(js, /interface Props|: Props/, "types are erased");
+    });
+
+    it("ignores the project's react-jsx tsconfig: output is h(), never a jsx-runtime import", async () => {
+        const js = await readFile(join(out, "pages", "home.js"), "utf8");
+        assert.doesNotMatch(js, /jsx-runtime/);
+        assert.match(js, /h\(Column/);
     });
 
     it("inlines relative imports and keeps @tiny-ui/* as bare specifiers", async () => {
