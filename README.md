@@ -22,6 +22,15 @@ build-logic/ Gradle convention plugins
 
 目录与命名依据见 [docs/README.md](./docs/README.md)。
 
+## 构建
+
+```sh
+./gradlew build      # compose 库 + 测试（Android host / iOS simulator）+ sample APK + iOS framework；需要 JDK 25、Android SDK、Xcode
+pnpm install && pnpm build && pnpm test
+```
+
+本地联调 quickjs-kmp：`local.properties` 加 `quickjs-kmp.dir=<quickjs-kmp 仓路径>`，即从源码构建（composite build）。
+
 ## License
 
 [MIT](./LICENSE)
