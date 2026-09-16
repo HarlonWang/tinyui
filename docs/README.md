@@ -72,7 +72,10 @@ tinyui/
 │   └── cli/            @tiny-ui/cli     构建工具：TSX → h()（ES2025）→ 每页一个 ESM 模块字节码，`tinyui build`
 ├── compose/            wang.harlon:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件；依赖 quickjs-kmp
 ├── schema/             内置组件 schema 的唯一真值 → 生成 packages/core 的 .d.ts 与 compose/ 的注册代码
-├── sample/             示例 App（Android + iOS），M1 Counter / M2 列表页在这里跑
+├── sample/             示例 App，M1 Counter / M2 列表页在这里跑
+│   ├── shared/         KMP 模块：App() 与 iOS 入口，出静态 framework（AGP 9 不允许 application 与 KMP 插件同模块）
+│   ├── androidApp/     Android 壳（纯 com.android.application）
+│   └── iosApp/         Xcode 壳
 ├── bench/              响应式模型与引擎 benchmark（引擎现场编译进 .engine*/，见 bench/README.md）
 └── build-logic/        Gradle convention plugins
 ```
@@ -84,6 +87,8 @@ tinyui/
 - `compose/`：直说它是 Compose Multiplatform 那一侧，将来若有第二渲染端可并列扩展；否掉 `host/`（运行时视角的词不适合做目录）、`library/`（多生态仓里"library of what"不清）、`container/`（国内直觉好但海外联想 Docker）、`kmp/`（说构建方式不说职责）
 - `schema/`：两侧共同真值，独立顶层目录以体现"契约在中间"
 - `sample/`：Gradle 工程按 Android / KMP 惯例叫；`bench/`、`build-logic/` 沿用现有
+
+本地联调 quickjs-kmp：`local.properties` 写 `quickjs-kmp.dir=<仓路径>` 即 composite build 从源码构建，坐标映射由该仓 `gradle/composite-substitutions` 声明；CI 无 `local.properties`，解析 Maven 版本（catalog `quickjsKmp`）。
 
 约定：顶层只放这八个目录；新 npm 包进 `packages/`，新 Kotlin 模块进 `compose/` 作为子模块，不在顶层增生。ADR 文本中的"宿主"仍指 Kotlin 侧这一运行时角色，与目录名 `compose/` 不冲突。
 

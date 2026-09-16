@@ -1,0 +1,16 @@
+// Klib ABI Dump
+// Targets: [iosArm64, iosSimulatorArm64]
+// Rendering settings:
+// - Signature version: 2
+// - Show manifest properties: true
+// - Show declarations: true
+
+// Library unique name: <tinyui:compose>
+final object wang.harlon.tinyui/TinyUI { // wang.harlon.tinyui/TinyUI|null[0]
+    final val engineVersion // wang.harlon.tinyui/TinyUI.engineVersion|{}engineVersion[0]
+        final fun <get-engineVersion>(): kotlin/String // wang.harlon.tinyui/TinyUI.engineVersion.<get-engineVersion>|<get-engineVersion>(){}[0]
+}
+
+final val wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop|#static{}wang_harlon_tinyui_TinyUI$stableprop[0]
+
+final fun wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop_getter|wang_harlon_tinyui_TinyUI$stableprop_getter(){}[0]
