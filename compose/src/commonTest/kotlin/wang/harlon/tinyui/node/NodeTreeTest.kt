@@ -14,7 +14,7 @@ class NodeTreeTest {
     private val problems = mutableListOf<PatchProblem>()
     private val tree = NodeTree(ComponentRegistry().registerBuiltins()) { problems += it }
 
-    private fun ids(node: UiNode) = node.children.map { it.id }
+    private fun ids(node: UINode) = node.children.map { it.id }
 
     @Test
     fun mountsTheCounterTree() {

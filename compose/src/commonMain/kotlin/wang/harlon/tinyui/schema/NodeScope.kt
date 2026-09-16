@@ -5,11 +5,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import wang.harlon.tinyui.node.Command
-import wang.harlon.tinyui.node.UiNode
+import wang.harlon.tinyui.node.UINode
 
 /** What a component sees of its node: typed props, registered events, children (docs/adr-003 §3.3). */
 interface NodeScope {
-    val node: UiNode
+    val node: UINode
 
     /** A prop declared in the schema, already converted; the schema default when JS never set it. */
     operator fun <T> get(key: String): T?
@@ -28,7 +28,7 @@ interface NodeScope {
 
     /** Renders one child; for components that lay children out themselves (LazyColumn). */
     @Composable
-    fun RenderChild(child: UiNode)
+    fun RenderChild(child: UINode)
 }
 
 /** Consumes this node's commands as they arrive, oldest first; one-shot, after composition (docs/adr-004 §3.2). */

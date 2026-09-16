@@ -38,12 +38,12 @@ Compose 的 `SnapshotStateMap` 是**一个**状态对象：改任何 key，所�
 | 对象数 | 每节点 1 个状态对象 | 每节点 N 个（N = prop 数，通常 3～8） |
 | 新增 key | 天然支持 | 要预建全部 key，或外层再包一个 map 状态 |
 
-选 A：一个节点对应一个 composable（`Text`、`Row`），它本身就是 Compose 里最小的合理重组范围，改 `color` 顺带重算一次 `Text` 的参数是微秒级；B 把粒度做到句级，换来每节点多几个状态对象——ADR-001 已证明在意的是每行常驻对象数，同样的取舍在 Kotlin 侧没理由反过来。children 用 `SnapshotStateList<UiNode>`，插入 / 移动 / 删除只重组父节点的子列表布局，子节点各自 `key(id)` 包住不重组。
+选 A：一个节点对应一个 composable（`Text`、`Row`），它本身就是 Compose 里最小的合理重组范围，改 `color` 顺带重算一次 `Text` 的参数是微秒级；B 把粒度做到句级，换来每节点多几个状态对象——ADR-001 已证明在意的是每行常驻对象数，同样的取舍在 Kotlin 侧没理由反过来。children 用 `SnapshotStateList<UINode>`，插入 / 移动 / 删除只重组父节点的子列表布局，子节点各自 `key(id)` 包住不重组。
 
 ```kotlin
-class UiNode(val id: Int, val type: String) {
+class UINode(val id: Int, val type: String) {
     val props = mutableStateMapOf<String, Any?>()
-    val children = mutableStateListOf<UiNode>()
+    val children = mutableStateListOf<UINode>()
 }
 ```
 
@@ -77,7 +77,7 @@ fun interface Component {
 }
 
 interface NodeScope {
-    val node: UiNode
+    val node: UINode
     operator fun <T> get(key: String): T             // schema 声明过的 key，已是类型化值
     fun has(event: String): Boolean                  // JS 是否注册了该事件的 handler
     fun dispatch(event: String, payload: String = "{}")
@@ -137,7 +137,7 @@ register("Text", props = {
 
 | 子问题 | 结论 |
 |---|---|
-| 节点模型 | 节点即重组单元：`UiNode(id, type, props: SnapshotStateMap, children: SnapshotStateList)`；children 各自 `key(id)` |
+| 节点模型 | 节点即重组单元：`UINode(id, type, props: SnapshotStateMap, children: SnapshotStateList)`；children 各自 `key(id)` |
 | 解析与投递 | JS 线程流式解析、在 `withMutableSnapshot` 内直接写节点表，零中间对象；主线程只重组。节点表只允许 JS 线程写；禁止 composable 内阻塞进引擎 |
 | 组件注册 | App 级不可变注册表；组件 = 接收 `NodeScope` 的 composable；内置裸名、宿主扩展带前缀；`__mount` 下发类型 + 能力清单；未知类型 `Placeholder` + E5 |
 | prop 类型 | 组件声明 schema，写入时转换，失败跳过并上报，未声明 key 同样跳过上报；公共布局 prop 统一 schema 经 `modifier()` 合成；数字 dp、字号 sp 由 schema 决定 |

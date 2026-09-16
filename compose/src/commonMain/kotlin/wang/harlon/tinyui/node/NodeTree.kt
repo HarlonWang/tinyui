@@ -26,13 +26,13 @@ class PatchProblem(val op: String, val reason: String) {
  * (docs/adr-003-kotlin-node-tree-and-registry.md §3.2). Op semantics: docs/patch-protocol.md.
  */
 class NodeTree(private val registry: ComponentRegistry, private val report: (PatchProblem) -> Unit) {
-    val root = UiNode(ROOT_ID, "root")
-    private val nodes = HashMap<Int, UiNode>().apply { put(ROOT_ID, root) }
-    private val born = ArrayList<UiNode>()
+    val root = UINode(ROOT_ID, "root")
+    private val nodes = HashMap<Int, UINode>().apply { put(ROOT_ID, root) }
+    private val born = ArrayList<UINode>()
 
     val size: Int get() = nodes.size
 
-    fun node(id: Int): UiNode? = nodes[id]
+    fun node(id: Int): UINode? = nodes[id]
 
     /** Applies one flush atomically: other threads see the tree before or after, never in between. */
     fun apply(json: String) {
@@ -80,7 +80,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         if (nodes.containsKey(id)) return report(PatchProblem(op.toString(), "id already exists"))
         // the requested type stays on the node: Render falls back to Placeholder, which shows it in debug
         if (registry.schema(type) == null) report(PatchProblem(op.toString(), "unknown component type, rendering Placeholder"))
-        nodes[id] = UiNode(id, type).also { born += it }
+        nodes[id] = UINode(id, type).also { born += it }
     }
 
     private fun setProp(f: JsonArray, op: JsonElement) {
@@ -133,15 +133,15 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     }
 
     /** Ops that act on a node as a child never target the root container. */
-    private fun child(f: JsonArray, op: JsonElement, at: Int = 2): UiNode? {
+    private fun child(f: JsonArray, op: JsonElement, at: Int = 2): UINode? {
         val id = f.int(at) ?: run { report(PatchProblem(op.toString(), "op without node id")); return null }
         val node = nodes[id] ?: run { report(PatchProblem(op.toString(), "unknown node $id")); return null }
         if (node.id == ROOT_ID) { report(PatchProblem(op.toString(), "the root container is not a child")); return null }
         return node
     }
 
-    private fun isAncestor(node: UiNode, of: UiNode): Boolean {
-        var n: UiNode? = of.parent
+    private fun isAncestor(node: UINode, of: UINode): Boolean {
+        var n: UINode? = of.parent
         while (n != null) { if (n === node) return true; n = n.parent }
         return false
     }
@@ -161,7 +161,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         node.commands.add(Command(name, args))
     }
 
-    private fun forget(node: UiNode) {
+    private fun forget(node: UINode) {
         nodes.remove(node.id)
         for (child in node.children) forget(child)
     }

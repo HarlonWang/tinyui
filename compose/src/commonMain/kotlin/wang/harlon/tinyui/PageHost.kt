@@ -48,7 +48,7 @@ import wang.harlon.quickjs.JsValue
 import wang.harlon.quickjs.ObjectTransport
 import wang.harlon.tinyui.node.NodeTree
 import wang.harlon.tinyui.node.PatchProblem
-import wang.harlon.tinyui.node.UiNode
+import wang.harlon.tinyui.node.UINode
 import wang.harlon.tinyui.schema.ComponentRegistry
 import wang.harlon.tinyui.schema.NodeScope
 import wang.harlon.tinyui.schema.SizeValue
@@ -295,7 +295,7 @@ class PageHost(
     private fun JsonObject.str(key: String): String? = this[key]?.jsonPrimitive?.contentOrNull
 
     /** The scope a component renders through. */
-    internal inner class Scope(override val node: UiNode) : NodeScope {
+    internal inner class Scope(override val node: UINode) : NodeScope {
         @Suppress("UNCHECKED_CAST")
         override fun <T> get(key: String): T? = (node.props[key] ?: registry.schema(node.type)?.prop(key)?.default) as T?
         override fun has(event: String): Boolean = node.events[event] == true
@@ -319,11 +319,11 @@ class PageHost(
         }
 
         @Composable
-        override fun RenderChild(child: UiNode) = Render(child)
+        override fun RenderChild(child: UINode) = Render(child)
     }
 
     @Composable
-    internal fun Render(node: UiNode) {
+    internal fun Render(node: UINode) {
         registry.Render(node.type, Scope(node))
     }
 
