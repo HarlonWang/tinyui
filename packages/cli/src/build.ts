@@ -74,6 +74,8 @@ async function discoverPages(pagesDir: string): Promise<Map<string, string>> {
         if (!e.isFile() || !/\.tsx?$/.test(e.name) || e.name.endsWith(".d.ts")) continue;
         const file = join(e.parentPath, e.name);
         const name = "pages/" + relative(pagesDir, file).replace(/\.tsx?$/, "").split(sep).join("/");
+        const clash = found.get(name);
+        if (clash) throw new Error(`page ${name} has two sources: ${clash} and ${file}`);
         found.set(name, file);
     }
     return new Map([...found].sort(([a], [b]) => (a < b ? -1 : 1)));

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, describe, it } from "node:test";
@@ -63,6 +63,18 @@ describe("tinyui build", () => {
         const core = await readFile(join(out, "runtime", "core.js"), "utf8");
         assert.match(core, /export \{/);
         assert.doesNotMatch(core, /from "@tiny-ui\//);
+    });
+
+    it("rejects two sources for one page name", async () => {
+        const clashRoot = await mkdtemp(join(tmpdir(), "tinyui-clash-"));
+        try {
+            await mkdir(join(clashRoot, "src", "pages"), { recursive: true });
+            await writeFile(join(clashRoot, "src", "pages", "home.ts"), "export default () => 1;");
+            await writeFile(join(clashRoot, "src", "pages", "home.tsx"), "export default () => 2;");
+            await assert.rejects(build({ root: clashRoot, jsOnly: true }), /page pages\/home has two sources/);
+        } finally {
+            await rm(clashRoot, { recursive: true, force: true });
+        }
     });
 
     it("lists everything in manifest.json", async () => {
