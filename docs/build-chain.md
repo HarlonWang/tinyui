@@ -1,6 +1,6 @@
 # 构建链：TSX → ESM 模块字节码
 
-- 状态：方案已定（2026-09-16），实施中
+- 状态：已完成（2026-09-16，PR #2）；sample 在 Android 模拟器与 iOS 模拟器上显示 `tinyui:pages/home`
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
 - 范围：`@tiny-ui/cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、字节码行号回映射、`qjsc-kmp` 二进制分发、页面级配置文件不在本期
 
@@ -20,10 +20,12 @@ src/pages/home.tsx ──esbuild──▶ dist/pages/home.js + .map ──qjsc-k
 
 | 步骤 | 做什么 | 不做什么 |
 |---|---|---|
-| esbuild | TS 类型擦除；JSX → `h()`（`jsxFactory: "h"`，`jsxInject` 自动注入 import，页面不手写）；业务内部相对 import 合并进页面模块；`external: ["@tiny-ui/*"]` 保持裸说明符；`format: "esm"`，`target: "esnext"`；输出 source map | 任何语法降级；对 `@tiny-ui/*` 的解析 |
+| esbuild | TS 类型擦除；JSX → `h()`（`jsxFactory: "h"`，`inject` 一个内存模块自动引入 `h` / `Fragment`，页面不手写）；业务内部相对 import 合并进页面模块；`@tiny-ui/*` 在插件 `onResolve` 里标 `external` + `sideEffects: false`，保持裸说明符且未用到时整条 import 被去掉；`format: "esm"`，`target: "esnext"`；输出 source map | 任何语法降级；对 `@tiny-ui/*` 的解析 |
 | qjsc-kmp | 源码模块 → 字节码，`-n` 给定模块名，`--strip-source` 保留行号去源码 | 校验模块图（引擎加载时查表） |
 
-**页面名即模块名**：`src/pages/home.tsx` → `pages/home`，子目录保留路径，无后缀无前缀（ADR-005 §4）。运行时模块名固定 `@tiny-ui/core`、`@tiny-ui/native`。
+**页面名即模块名**：`src/pages/home.tsx` → `pages/home`，子目录保留路径，无后缀无前缀（ADR-005 §4）。运行时模块名固定 `@tiny-ui/core`、`@tiny-ui/native`。产物目录 `runtime/*.bin`、`pages/**/*.bin`、`manifest.json`（页面与运行时模块清单，Kotlin 侧路由表的来源，见 [app-model.md](./app-model.md)）。
+
+`inject` 的 import 不能只写 `external` 配置项：esbuild 对 `external` 列表里的模块一律保留 import（当作有副作用），无 JSX 的页面也会 `import { h } from "@tiny-ui/core"`，引擎链接模块时因 core 没有该导出而报 `SyntaxError`（2026-09-16 Android 模拟器实测）。走插件 `onResolve` 返回 `sideEffects: false` 才会被摇掉。
 
 ## 3. 页面即构建单元
 
@@ -90,8 +92,8 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 | `packages/core` / `native` | 不动运行时 API，只保证入口能打成单模块，各导出 `VERSION` 供 sample 显示 |
 | `compose/` | ADR-002 K0 最小版：注册 core → 注册 native → 运行页面模块 → 返回 namespace。命名待 M1 定，本期只保证序列在库里而不在 sample 里。commonTest 用 `JsBytecode.compile` 现场编字节码，不依赖宿主工具 |
 | `sample/js` | 新 pnpm workspace 成员，`src/pages/home.tsx`。本期页面用纯 TS 只 import `VERSION`：`h` 的签名是 C 组的事，不在 core 放临时实现；JSX 变换的正确性由 CLI 单元测试覆盖 |
-| `sample/shared` | Gradle Exec 任务调 CLI，产物挂成 Compose resources 自定义目录，`Res.readBytes` 读入后走 K0 |
+| `sample/shared` | Gradle：`pnpm run build` → `tinyui build` → `Sync` 只取 `.bin` 与清单 → `compose.resources.customDirectory`，`Res.readBytes("files/tinyui/…")` 读入后走 K0。AGP 9 的 KMP 库插件默认不处理 assets，Compose resources 在 Android 走 assets，必须 `androidResources { enable = true }`，否则 APK 里没有资源且构建不报错（2026-09-16 实测） |
 | `settings.gradle.kts` | 有 `quickjs-kmp.dir` 时把 `qjsc-kmp` 路径传给 Exec 任务 |
-| CI | gradle job 加 setup-node + pnpm，clone quickjs-kmp 编宿主工具；ios.yml 同样 |
+| CI | gradle job 加 setup-node + pnpm，clone quickjs-kmp 的 catalog 版本 tag 编 `buildHostTools`（qjsc-kmp）与 `buildNativeHostJni`（Android host 测试要加载宿主 JNI 库，Maven 包里没有），经 `TINYUI_QJSC` / `TINYUI_QUICKJS_HOST_JNI` 传入；ios.yml 同样 |
 
 source map 随 `.js` 输出到 `.map`；行列号回映射到 TSX 归 E1 / E2 错误上报那一期。

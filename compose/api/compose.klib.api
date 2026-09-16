@@ -6,11 +6,36 @@
 // - Show declarations: true
 
 // Library unique name: <tinyui:compose>
+final class wang.harlon.tinyui/PageEngine : kotlin/AutoCloseable { // wang.harlon.tinyui/PageEngine|null[0]
+    final fun callDefault(kotlin/Array<out wang.harlon.quickjs/JsValue>...): wang.harlon.quickjs/JsValue // wang.harlon.tinyui/PageEngine.callDefault|callDefault(kotlin.Array<out|wang.harlon.quickjs.JsValue>...){}[0]
+    final fun close() // wang.harlon.tinyui/PageEngine.close|close(){}[0]
+
+    final object Companion { // wang.harlon.tinyui/PageEngine.Companion|null[0]
+        final const val MODULE_SCHEME // wang.harlon.tinyui/PageEngine.Companion.MODULE_SCHEME|{}MODULE_SCHEME[0]
+            final fun <get-MODULE_SCHEME>(): kotlin/String // wang.harlon.tinyui/PageEngine.Companion.MODULE_SCHEME.<get-MODULE_SCHEME>|<get-MODULE_SCHEME>(){}[0]
+
+        final fun load(wang.harlon.tinyui/RuntimeBundle, kotlin/ByteArray, wang.harlon.quickjs/JsEngineConfig = ...): wang.harlon.tinyui/PageEngine // wang.harlon.tinyui/PageEngine.Companion.load|load(wang.harlon.tinyui.RuntimeBundle;kotlin.ByteArray;wang.harlon.quickjs.JsEngineConfig){}[0]
+    }
+}
+
+final class wang.harlon.tinyui/RuntimeBundle { // wang.harlon.tinyui/RuntimeBundle|null[0]
+    constructor <init>(kotlin/ByteArray, kotlin/ByteArray) // wang.harlon.tinyui/RuntimeBundle.<init>|<init>(kotlin.ByteArray;kotlin.ByteArray){}[0]
+
+    final val core // wang.harlon.tinyui/RuntimeBundle.core|{}core[0]
+        final fun <get-core>(): kotlin/ByteArray // wang.harlon.tinyui/RuntimeBundle.core.<get-core>|<get-core>(){}[0]
+    final val native // wang.harlon.tinyui/RuntimeBundle.native|{}native[0]
+        final fun <get-native>(): kotlin/ByteArray // wang.harlon.tinyui/RuntimeBundle.native.<get-native>|<get-native>(){}[0]
+}
+
 final object wang.harlon.tinyui/TinyUI { // wang.harlon.tinyui/TinyUI|null[0]
     final val engineVersion // wang.harlon.tinyui/TinyUI.engineVersion|{}engineVersion[0]
         final fun <get-engineVersion>(): kotlin/String // wang.harlon.tinyui/TinyUI.engineVersion.<get-engineVersion>|<get-engineVersion>(){}[0]
 }
 
+final val wang.harlon.tinyui/wang_harlon_tinyui_PageEngine$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_PageEngine$stableprop|#static{}wang_harlon_tinyui_PageEngine$stableprop[0]
+final val wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop|#static{}wang_harlon_tinyui_RuntimeBundle$stableprop[0]
 final val wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop // wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop|#static{}wang_harlon_tinyui_TinyUI$stableprop[0]
 
+final fun wang.harlon.tinyui/wang_harlon_tinyui_PageEngine$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_PageEngine$stableprop_getter|wang_harlon_tinyui_PageEngine$stableprop_getter(){}[0]
+final fun wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_RuntimeBundle$stableprop_getter|wang_harlon_tinyui_RuntimeBundle$stableprop_getter(){}[0]
 final fun wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop_getter(): kotlin/Int // wang.harlon.tinyui/wang_harlon_tinyui_TinyUI$stableprop_getter|wang_harlon_tinyui_TinyUI$stableprop_getter(){}[0]

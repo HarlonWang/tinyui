@@ -8,6 +8,8 @@
     "exactOptionalPropertyTypes": true,
     "noUncheckedIndexedAccess": true,
     "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
     "isolatedModules": true,
     "declaration": true,
     "sourceMap": true,

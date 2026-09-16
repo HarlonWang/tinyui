@@ -73,6 +73,7 @@ tinyui/
 ├── compose/            wang.harlon:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件；依赖 quickjs-kmp
 ├── schema/             内置组件 schema 的唯一真值 → 生成 packages/core 的 .d.ts 与 compose/ 的注册代码
 ├── sample/             示例 App，M1 Counter / M2 列表页在这里跑
+│   ├── js/             页面源码（pnpm workspace 成员），shared 的 Gradle 任务调 CLI 编成字节码打进 Compose 资源
 │   ├── shared/         KMP 模块：App() 与 iOS 入口，出静态 framework（AGP 9 不允许 application 与 KMP 插件同模块）
 │   ├── androidApp/     Android 壳（纯 com.android.application）
 │   └── iosApp/         Xcode 壳
@@ -98,7 +99,7 @@ tinyui/
 
 | 文件 | 主题 | 状态 |
 |---|---|---|
-| [build-chain.md](./build-chain.md) | 构建链：TSX → ESM 模块字节码，esbuild 选型，字节码由 CLI 经 `qjsc-kmp` 生成 | 方案已定（2026-09-16），实施中 |
+| [build-chain.md](./build-chain.md) | 构建链：TSX → ESM 模块字节码，esbuild 选型，字节码由 CLI 经 `qjsc-kmp` 生成 | 已完成（2026-09-16） |
 | [app-model.md](./app-model.md) | 应用模型：路由、生命周期、跨页状态在 Kotlin；页面之间经 Kotlin 中转的四种通信 | 已对齐（2026-09-16），API 面归 C 组 |
 
 ## 下一阶段
