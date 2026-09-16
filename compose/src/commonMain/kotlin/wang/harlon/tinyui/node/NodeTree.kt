@@ -47,7 +47,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             for (node in born) {
                 node.created = true
                 registry.schema(node.type)?.props?.forEach { (key, spec) ->
-                    if (spec.required && key !in node.props) report(PatchProblem("[\"c\",${node.id},\"${node.type}\"]", "required prop $key was not set in the creating flush"))
+                    if (spec.required && node.props[key] == null) report(PatchProblem("[\"c\",${node.id},\"${node.type}\"]", "required prop $key was not set in the creating flush"))
                 }
             }
             born.clear()
@@ -97,6 +97,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         val spec = schema.prop(key) ?: return report(PatchProblem(op.toString(), "prop not in schema of ${node.type}"))
         if (spec.initial && node.created) return report(PatchProblem(op.toString(), "$key is an initial prop of ${node.type}: writes after creation are ignored"))
         if (value is JsonNull) {
+            if (spec.required && spec.default == null) return report(PatchProblem(op.toString(), "$key is required on ${node.type}; null is not allowed"))
             node.props[key] = spec.default
             return
         }

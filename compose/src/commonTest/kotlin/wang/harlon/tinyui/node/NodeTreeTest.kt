@@ -84,6 +84,9 @@ class NodeTreeTest {
         tree.apply("""[["c",1,"Text"],["i",0,1,0]]""")
         assertEquals("required prop text was not set in the creating flush", problems.single().reason)
         problems.clear()
+        tree.apply("""[["c",3,"Text"],["p",3,"text",null],["i",0,3,1]]""")
+        assertEquals(listOf("text is required on Text; null is not allowed", "required prop text was not set in the creating flush"), problems.map { it.reason })
+        problems.clear()
         tree.apply("""[["c",2,"Button"],["p",2,"text","ok"],["i",0,2,1]]""")
         assertTrue(problems.isEmpty(), problems.toString())
     }
