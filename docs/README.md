@@ -71,7 +71,7 @@ tinyui/
 │   ├── native/         @tiny-ui/native  业务调用的宿主能力 API（http / storage / toast / navigation / i18n …，即 ADR-002 的 J2 / J3）
 │   └── cli/            @tiny-ui/cli     构建工具：TSX → h()（ES2025）→ 每页一个 ESM 模块字节码，`tinyui build`
 ├── compose/            wang.harlon:tinyui  KMP 库（Compose Multiplatform 侧）：节点表、注册表、桥、内置组件；依赖 quickjs-kmp
-├── schema/             内置组件 schema 的唯一真值 → 生成 packages/core 的 .d.ts 与 compose/ 的注册代码
+├── schema/             内置组件 schema 的唯一真值（TS DSL）→ `pnpm schema` 生成 packages/core 的类型与 compose/ 的注册 schema
 ├── sample/             示例 App，M1 Counter / M2 列表页在这里跑
 │   ├── js/             页面源码（pnpm workspace 成员），shared 的 Gradle 任务调 CLI 编成字节码打进 Compose 资源
 │   ├── shared/         KMP 模块：App() 与 iOS 入口，出静态 framework（AGP 9 不允许 application 与 KMP 插件同模块）
@@ -105,6 +105,8 @@ tinyui/
 | [runtime-api.md](./runtime-api.md) | `@tiny-ui/core` v1 的 API 定义、页面模块契约、桥入口 | 已定（2026-09-16） |
 | [jsx-transform.md](./jsx-transform.md) | CLI 的 JSX 变换：thunk 包裹规则、编译期报错、source map | 已定（2026-09-16） |
 | [patch-protocol.md](./patch-protocol.md) | patch 协议 v1：六种 op、id、值、顺序保证、版本、E5 | 已定（2026-09-16） |
+| [components.md](./components.md) | 内置组件：schema 真值与生成链、公共布局 prop 与 Modifier 顺序、首批八个组件、命令消费、Placeholder | 已定（2026-09-16） |
+| [native-api.md](./native-api.md) | `@tiny-ui/native` 与 `HostServices`：J2 白名单、navigation / store / events / http、E3 错误码与阈值 | 已定（2026-09-16） |
 
 ## 下一阶段
 

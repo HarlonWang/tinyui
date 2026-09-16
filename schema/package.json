@@ -1,0 +1,11 @@
+{
+  "name": "tinyui-schema",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@tiny-ui/cli": "workspace:*"
+  }
+}

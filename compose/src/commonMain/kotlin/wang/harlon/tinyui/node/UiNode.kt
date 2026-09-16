@@ -15,6 +15,8 @@ class UiNode internal constructor(val id: Int, val type: String) {
     /** One-shot commands waiting for the component to consume them (`x` op). */
     val commands: SnapshotStateList<Command> = mutableStateListOf()
     internal var parent: UiNode? = null
+    /** Set once the creating flush is applied: `initial` props stop accepting writes. */
+    internal var created = false
 }
 
 class Command(val name: String, val args: Map<String, Any?>)

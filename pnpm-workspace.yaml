@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - sample/js
+  - schema
 
 onlyBuiltDependencies:
   - esbuild

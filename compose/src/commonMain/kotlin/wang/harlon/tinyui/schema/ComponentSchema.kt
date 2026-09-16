@@ -10,37 +10,80 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 
-/** How one prop crosses the bridge: its JSON scalar, the typed value it becomes, and the default `null` restores. */
-sealed class PropSpec(val kind: String, val default: Any?) {
+/** `width` / `height`: a length in dp, or fill / wrap the parent. */
+sealed interface SizeValue {
+    data class Fixed(val dp: Dp) : SizeValue
+    data object Fill : SizeValue
+    data object Wrap : SizeValue
+}
+
+/**
+ * How one prop crosses the bridge: its JSON scalar, the typed value it becomes, and the default `null` restores.
+ * Instances are generated from schema/ (docs/components.md).
+ */
+sealed class PropSpec(val kind: String, val required: Boolean, val initial: Boolean) {
+    /** Typed default; `null` when the schema has none. */
+    abstract val default: Any?
     abstract fun convert(value: JsonPrimitive): Any?
 
-    class Str(default: String?) : PropSpec("string", default) {
+    class Str(default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("string", required, initial) {
+        override val default: String? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content
     }
 
-    class Num(default: Double?) : PropSpec("number", default) {
+    class Num(default: Double?, required: Boolean = false, initial: Boolean = false) : PropSpec("number", required, initial) {
+        override val default: Double? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.doubleOrNull
     }
 
-    class Bool(default: Boolean?) : PropSpec("boolean", default) {
+    class Bool(default: Boolean?, required: Boolean = false, initial: Boolean = false) : PropSpec("boolean", required, initial) {
+        override val default: Boolean? = default
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.booleanOrNull
     }
 
-    class Dp(default: androidx.compose.ui.unit.Dp?) : PropSpec("dp", default) {
+    class Dp(default: Double?, required: Boolean = false, initial: Boolean = false) : PropSpec("dp", required, initial) {
+        override val default: androidx.compose.ui.unit.Dp? = default?.dp
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.doubleOrNull?.dp
     }
 
-    class Sp(default: TextUnit?) : PropSpec("sp", default) {
+    class Sp(default: Double?, required: Boolean = false, initial: Boolean = false) : PropSpec("sp", required, initial) {
+        override val default: TextUnit? = default?.sp
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.doubleOrNull?.sp
     }
 
     /** `#RRGGBB` or `#AARRGGBB`. */
-    class ColorSpec(default: Color?) : PropSpec("color", default) {
+    class ColorSpec(default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("color", required, initial) {
+        override val default: Color? = default?.let(::parseColor)
         override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content?.let(::parseColor)
     }
 
-    class Enum<T : kotlin.Enum<T>>(default: T?, private val values: Map<String, T>) : PropSpec("enum", default) {
-        override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content?.let { values[it] }
+    /** Stored as the enum name; the composable maps it. */
+    class Enum(val values: Set<String>, default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("enum", required, initial) {
+        override val default: String? = default
+        override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content?.takeIf { it in values }
+    }
+
+    class Size(default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("size", required, initial) {
+        override val default: SizeValue? = default?.let(::parseSize)
+        override fun convert(value: JsonPrimitive): Any? =
+            if (value.isString) parseSize(value.content) else value.doubleOrNull?.let { SizeValue.Fixed(it.dp) }
+
+        private fun parseSize(text: String): SizeValue? = when (text) {
+            "fill" -> SizeValue.Fill
+            "wrap" -> SizeValue.Wrap
+            else -> text.toDoubleOrNull()?.let { SizeValue.Fixed(it.dp) }
+        }
+    }
+}
+
+/** A field of an event payload or command args (flat, scalar). */
+enum class FieldSpec {
+    Str, Num, Bool;
+
+    fun accepts(value: JsonPrimitive): Boolean = when (this) {
+        Str -> value.isString
+        Num -> !value.isString && value.doubleOrNull != null
+        Bool -> !value.isString && value.booleanOrNull != null
     }
 }
 
@@ -55,29 +98,28 @@ internal fun parseColor(text: String): Color? {
     return Color(argb.toULong().toLong().toInt())
 }
 
-class ComponentSchema internal constructor(
+class ComponentSchema(
+    val type: String,
     val props: Map<String, PropSpec>,
-    val events: Set<String>,
-    val commands: Set<String>,
-)
+    val events: Map<String, Map<String, FieldSpec>>,
+    val commands: Map<String, Map<String, FieldSpec>>,
+    val children: Boolean,
+    /** Accepts [LayoutProps]. */
+    val layout: Boolean,
+) {
+    /** Own props plus the common layout props when [layout] is on. */
+    fun prop(key: String): PropSpec? = props[key] ?: if (layout) LayoutProps.specs[key] else null
+}
 
-class SchemaBuilder internal constructor() {
-    private val props = LinkedHashMap<String, PropSpec>()
-    private val events = LinkedHashSet<String>()
-    private val commands = LinkedHashSet<String>()
-
-    fun string(name: String, default: String? = null) { props[name] = PropSpec.Str(default) }
-    fun number(name: String, default: Double? = null) { props[name] = PropSpec.Num(default) }
-    fun boolean(name: String, default: Boolean? = null) { props[name] = PropSpec.Bool(default) }
-    fun dp(name: String, default: Dp? = null) { props[name] = PropSpec.Dp(default) }
-    fun sp(name: String, default: TextUnit? = null) { props[name] = PropSpec.Sp(default) }
-    fun color(name: String, default: Color? = null) { props[name] = PropSpec.ColorSpec(default) }
-    inline fun <reified T : Enum<T>> enum(name: String, default: T? = null) = enum(name, default, enumValues<T>().associateBy { it.name })
-    fun <T : Enum<T>> enum(name: String, default: T?, values: Map<String, T>) { props[name] = PropSpec.Enum(default, values) }
-    fun event(name: String) { events += name }
-    fun command(name: String) { commands += name }
-
-    internal fun build() = ComponentSchema(props, events, commands)
+/** The common layout props; the order here is the Modifier order (docs/components.md §2). */
+object LayoutProps {
+    val specs: Map<String, PropSpec> = linkedMapOf(
+        "width" to PropSpec.Size(default = null),
+        "height" to PropSpec.Size(default = null),
+        "cornerRadius" to PropSpec.Dp(default = null),
+        "background" to PropSpec.ColorSpec(default = null),
+        "padding" to PropSpec.Dp(default = null),
+    )
 }
 
 /** A registered component renders one node through its [NodeScope]. */

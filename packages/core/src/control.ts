@@ -1,6 +1,6 @@
 // For / Show: docs/runtime-api.md §4; slot mechanics in node.ts.
 import { disposeOwner, effect, onCleanup, signal, untrack, type Owner } from "./reactive.ts";
-import { CONTROL, renderInOwner, Slot, type Component, type Node } from "./node.ts";
+import { CONTROL, renderInOwner, Slot, type Node } from "./node.ts";
 
 export interface ShowProps<T> {
     when: T;
@@ -8,7 +8,9 @@ export interface ShowProps<T> {
     fallback?: () => Node;
 }
 
-export const Show: Component<ShowProps<unknown>> = Object.assign(function Show(props: ShowProps<unknown>): Node {
+type Control<F> = F & { [CONTROL]: true };
+
+export const Show: Control<<T>(props: ShowProps<T>) => Node> = Object.assign(function Show<T>(props: ShowProps<T>): Node {
     const slot = new Slot();
     let current: { owner: Owner; node: number } | null = null;
     let shown: boolean | undefined;
@@ -46,7 +48,7 @@ interface Row<T> {
     setIndex: (i: number) => void;
 }
 
-export const For: Component<ForProps<unknown>> = Object.assign(function For<T>(props: ForProps<T>): Node {
+export const For: Control<<T>(props: ForProps<T>) => Node> = Object.assign(function For<T>(props: ForProps<T>): Node {
     const slot = new Slot();
     const rows = new Map<string | number, Row<T>>();
     let order: (string | number)[] = [];

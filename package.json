@@ -2,11 +2,15 @@
   "name": "tinyui-monorepo",
   "private": true,
   "packageManager": "pnpm@10.20.0",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "schema": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/wang/harlon/tinyui/components/generated/BuiltinSchemas.kt --package wang.harlon.tinyui.components.generated",
+    "schema:check": "node packages/cli/dist/bin.js schema --entry schema/index.ts --ts packages/core/src/generated/components.ts --kt compose/src/commonMain/kotlin/wang/harlon/tinyui/components/generated/BuiltinSchemas.kt --package wang.harlon.tinyui.components.generated --check"
   },
   "devDependencies": {
     "typescript": "7.0.2"

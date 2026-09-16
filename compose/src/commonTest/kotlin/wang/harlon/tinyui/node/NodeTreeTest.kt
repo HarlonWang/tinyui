@@ -1,6 +1,7 @@
 package wang.harlon.tinyui.node
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import wang.harlon.tinyui.components.registerBuiltins
 import wang.harlon.tinyui.schema.ComponentRegistry
@@ -32,7 +33,7 @@ class NodeTreeTest {
         assertEquals(Color(0xFFFF0000), node.props["color"])
         assertEquals(18.sp, node.props["fontSize"])
         tree.apply("""[["p",1,"color",null]]""")
-        assertEquals(Color.Unspecified, node.props["color"])
+        assertNull(node.props["color"], "null restores the schema default, which Text.color does not have")
         assertTrue(problems.isEmpty(), problems.toString())
     }
 
@@ -61,6 +62,31 @@ class NodeTreeTest {
         tree.apply("""[["m",1,2]]""")
         assertEquals("missing index", problems.single().reason)
         assertEquals(listOf(2), ids(tree.node(1)!!), "a rejected move leaves the list untouched")
+    }
+
+    @Test
+    fun initialPropsOnlyCountAtCreationAndCommandArgsAreValidated() {
+        tree.apply("""[["c",1,"TextField"],["p",1,"initialText","a"],["i",0,1,0]]""")
+        assertEquals("a", tree.node(1)!!.props["initialText"])
+        tree.apply("""[["p",1,"initialText","b"],["p",1,"placeholder","hint"]]""")
+        assertEquals("a", tree.node(1)!!.props["initialText"], "later writes to an initial prop are ignored")
+        assertEquals("hint", tree.node(1)!!.props["placeholder"])
+        assertEquals(1, problems.size); assertTrue("initial prop" in problems.single().reason)
+        problems.clear()
+        tree.apply("""[["x",1,"setText",{"text":"z"}],["x",1,"setText",{}],["x",1,"setText",{"text":3}],["x",1,"focus",{}]]""")
+        assertEquals(listOf("setText", "focus"), tree.node(1)!!.commands.map { it.name })
+        assertEquals("z", tree.node(1)!!.commands[0].args["text"])
+        assertEquals(2, problems.size)
+    }
+
+    @Test
+    fun layoutPropsApplyToEveryLayoutComponent() {
+        tree.apply("""[["c",1,"Spacer"],["p",1,"width","fill"],["p",1,"height",12],["p",1,"padding",4],["i",0,1,0]]""")
+        val node = tree.node(1)!!
+        assertEquals(wang.harlon.tinyui.schema.SizeValue.Fill, node.props["width"])
+        assertEquals(wang.harlon.tinyui.schema.SizeValue.Fixed(12.dp), node.props["height"])
+        assertEquals(4.dp, node.props["padding"])
+        assertTrue(problems.isEmpty(), problems.toString())
     }
 
     @Test

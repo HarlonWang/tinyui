@@ -79,16 +79,20 @@ export class Slot implements SlotEntry {
     }
 }
 
-export interface Ref {
-    cmd(name: string, args?: Record<string, Scalar>): void;
+/** Handle to a node for one-shot commands (docs/runtime-api.md §5); `C` maps command names to their args. */
+export interface Ref<C extends Record<string, object> = Record<string, Record<string, Scalar>>> {
+    cmd<K extends keyof C & string>(name: K, ...args: {} extends C[K] ? [args?: C[K]] : [args: C[K]]): void;
 }
 
-export function ref(): Ref {
-    const r = { id: 0, cmd(name: string, args: Record<string, Scalar> = {}) {
-        if (r.id === 0) throw new Error("ref.cmd() before the ref was attached to a node");
-        patches.push(["x", r.id, name, args]);
-    } };
-    return r;
+export function ref<C extends Record<string, object> = Record<string, Record<string, Scalar>>>(): Ref<C> {
+    const r = {
+        id: 0,
+        cmd(name: string, args: object = {}) {
+            if (r.id === 0) throw new Error("ref.cmd() before the ref was attached to a node");
+            patches.push(["x", r.id, name, args]);
+        },
+    };
+    return r as unknown as Ref<C>;
 }
 
 /** `<>…</>`: its children are spliced into the parent's; only valid in a children position. */

@@ -28,6 +28,7 @@ class PatchProblem(val op: String, val reason: String) {
 class NodeTree(private val registry: ComponentRegistry, private val report: (PatchProblem) -> Unit) {
     val root = UiNode(ROOT_ID, "root")
     private val nodes = HashMap<Int, UiNode>().apply { put(ROOT_ID, root) }
+    private val born = ArrayList<UiNode>()
 
     val size: Int get() = nodes.size
 
@@ -43,6 +44,8 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         }
         Snapshot.withMutableSnapshot {
             for (op in ops) applyOp(op)
+            for (node in born) node.created = true
+            born.clear()
         }
     }
 
@@ -72,7 +75,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         if (nodes.containsKey(id)) return report(PatchProblem(op.toString(), "id already exists"))
         val known = registry.schema(type) != null
         if (!known) report(PatchProblem(op.toString(), "unknown component type, rendering Placeholder"))
-        nodes[id] = UiNode(id, if (known) type else ComponentRegistry.PLACEHOLDER)
+        nodes[id] = UiNode(id, if (known) type else ComponentRegistry.PLACEHOLDER).also { born += it }
     }
 
     private fun setProp(f: JsonArray, op: JsonElement) {
@@ -86,7 +89,8 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
             if (flag) node.events[key] = true else node.events.remove(key)
             return
         }
-        val spec = schema.props[key] ?: return report(PatchProblem(op.toString(), "prop not in schema of ${node.type}"))
+        val spec = schema.prop(key) ?: return report(PatchProblem(op.toString(), "prop not in schema of ${node.type}"))
+        if (spec.initial && node.created) return report(PatchProblem(op.toString(), "$key is an initial prop of ${node.type}: writes after creation are ignored"))
         if (value is JsonNull) {
             node.props[key] = spec.default
             return
@@ -140,8 +144,14 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
         val node = child(f, op, at = 1) ?: return
         val name = f.string(2) ?: return report(PatchProblem(op.toString(), "x without name"))
         val schema = registry.schema(node.type) ?: return
-        if (name !in schema.commands) return report(PatchProblem(op.toString(), "command not in schema of ${node.type}"))
-        val args = (f.getOrNull(3) as? JsonObject)?.mapValues { (_, v) -> (v as? JsonPrimitive)?.scalar() } ?: emptyMap()
+        val fields = schema.commands[name] ?: return report(PatchProblem(op.toString(), "command not in schema of ${node.type}"))
+        val given = f.getOrNull(3) as? JsonObject ?: JsonObject(emptyMap())
+        val args = HashMap<String, Any?>()
+        for ((field, spec) in fields) {
+            val v = given[field] as? JsonPrimitive ?: return report(PatchProblem(op.toString(), "command $name needs $field"))
+            if (!spec.accepts(v)) return report(PatchProblem(op.toString(), "command $name: $field must be $spec"))
+            args[field] = v.scalar()
+        }
         node.commands.add(Command(name, args))
     }
 

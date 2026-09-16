@@ -9,8 +9,7 @@ export type { ForProps, ShowProps } from "./control.ts";
 export { createResource } from "./resource.ts";
 export type { ResourceActions } from "./resource.ts";
 export { call, query, send, HostError } from "./host.ts";
-export { Column, Row, Text, Button } from "./components.ts";
-export type { ClickPayload } from "./components.ts";
+export * from "./components.ts";
 
 // Globals the engine provides to page code; there is no DOM lib to declare them (docs/adr-005-engine.md).
 declare global {
