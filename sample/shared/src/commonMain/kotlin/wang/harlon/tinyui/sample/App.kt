@@ -14,34 +14,43 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
-import wang.harlon.quickjs.JsValue
-import wang.harlon.tinyui.PageEngine
+import wang.harlon.tinyui.PageSink
 import wang.harlon.tinyui.RuntimeBundle
-import wang.harlon.tinyui.TinyUI
+import wang.harlon.tinyui.TinyUIPage
+import wang.harlon.tinyui.components.registerBuiltins
+import wang.harlon.tinyui.node.PatchProblem
 import wang.harlon.tinyui.sample.res.Res
+import wang.harlon.tinyui.schema.ComponentRegistry
+
+private class Bundle(val runtime: RuntimeBundle, val counter: ByteArray)
+
+/** App-level, built once (docs/adr-003 §3.3). */
+private val registry = ComponentRegistry().registerBuiltins()
+
+private val sink = object : PageSink {
+    override fun patchProblem(problem: PatchProblem) = println("TinyUI E5 $problem")
+    override fun businessError(entry: String, message: String, stack: String?) = println("TinyUI E1 [$entry] $message")
+    override fun log(line: String) = println("TinyUI $line")
+}
 
 @OptIn(ExperimentalResourceApi::class)
 @Composable
 fun App() {
-    var text by remember { mutableStateOf("loading pages/home …") }
+    var bundle by remember { mutableStateOf<Bundle?>(null) }
     LaunchedEffect(Unit) {
-        val runtime = RuntimeBundle(
-            core = Res.readBytes("files/tinyui/runtime/core.bin"),
-            native = Res.readBytes("files/tinyui/runtime/native.bin"),
+        bundle = Bundle(
+            RuntimeBundle(
+                core = Res.readBytes("files/tinyui/runtime/core.bin"),
+                native = Res.readBytes("files/tinyui/runtime/native.bin"),
+            ),
+            counter = Res.readBytes("files/tinyui/pages/counter.bin"),
         )
-        val page = Res.readBytes("files/tinyui/pages/home.bin")
-        text = withContext(Dispatchers.Default) {
-            runCatching {
-                PageEngine.load(runtime, page).use { (it.callDefault() as JsValue.Str).value }
-            }.getOrElse { "failed: $it" }
-        }
     }
     MaterialTheme {
         Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-            Text("$text\n\nquickjs-kmp ${TinyUI.engineVersion}")
+            val b = bundle
+            if (b == null) Text("loading…") else TinyUIPage(b.runtime, b.counter, registry, sink)
         }
     }
 }

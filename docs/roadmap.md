@@ -18,7 +18,8 @@
 |---|---|---|---|
 | 真机比值：Signal bench 在 Android / iOS 跑一遍（QuickJS） | ADR-001 / 005 | 所有性能判断都基于 macOS 数字，真机慢几倍要知道 | 待开 |
 | Runtime 创建 + 运行时模块 + 页面模块加载耗时；Runtime 基线内存 | ADR-002 / 005 | 决定"每页一 Runtime"的进页延迟与返回栈深度 | 待开 |
-| JS 线程写快照 vs 主线程重组的锁争用 | ADR-003 | 有问题要退回 op 列表投主线程，越早知道改动越小 | 待开 |
+| JS 线程写快照 vs 主线程重组的锁争用 | ADR-003 | 有问题要退回 op 列表投主线程，越早知道改动越小 | 待开（M1 的 `NodeTree.apply` 已按 `withMutableSnapshot` 写，可直接测） |
+| Kotlin 侧流式 patch 解析器 | ADR-003 §3.2 | M1 用 kotlinx `parseToJsonElement` 建树，ADR 定的是逐 token 直写节点表；B 组真机数据出来再决定值不值得 | 待开 |
 | "一行一个 effect"内存优化 | ADR-001 | 非阻塞，可最后做 | 待开 |
 
 ## C. 实现期定稿（要写文档，不需要 ADR，实现前必须定）
@@ -58,5 +59,5 @@
 1. **A 立项骨架**——先 quickjs-kmp（M1～M3），再 TinyUI 构建链，否则 B、C 都没有落点
 2. **B 前三项并行**——半天到一天的实验，结果决定 C 里几个数值和 ADR-003 的退路
 3. **C 前三项定稿**（运行时 API、patch 协议、schema DSL）——两侧代码的契约，定了才能分头写
-4. **M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干
+4. ~~**M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干~~ 已完成（PR #3，2026-09-16）：`@tiny-ui/core` 运行时（30 测试）、CLI JSX 变换（19 测试）、compose 节点表 / schema DSL / 注册表 / `PageHost` / `TinyUIPage`（9 测试），Counter 在 Android 与 iOS 模拟器上跑通。顺带修了 quickjs-kmp 的字节码注册入口不刷新栈顶的 bug（quickjs-kmp PR #12），**真机需要 quickjs-kmp ≥ 0.1.1**，发版后 bump catalog
 5. **C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入

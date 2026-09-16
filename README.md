@@ -2,7 +2,7 @@
 
 JS 写声明式组件、Compose Multiplatform 渲染的 UI 框架，引擎为 QuickJS（经 quickjs-kmp 接入）。Android / iOS 双端。
 
-> 早期阶段。关键选型已定，构建链已打通（TSX → 模块字节码 → 双端加载）；进度见 [docs/roadmap.md](./docs/roadmap.md)。
+> 早期阶段。关键选型已定，M1 Counter 已在双端跑通（TSX → 模块字节码 → 引擎 → patch → Compose）；进度见 [docs/roadmap.md](./docs/roadmap.md)。
 
 - 设计文档与决策记录：[docs/](./docs/README.md)
 - 响应式模型与引擎 benchmark：[bench/](./bench/README.md)
