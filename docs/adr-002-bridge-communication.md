@@ -8,7 +8,7 @@
 
 > **2026-09-15 修订（ADR-005）**：事实基础中的 mquickjs-kmp 换为 quickjs-kmp（shim ABI 与 `JsRuntime` 形态同形，句柄表保留）。逐条复盘后的结论：
 > - **事务机制加一步**：每次 K 入口的顺序是"执行入口 → 排空微任务（`JS_ExecutePendingJob` 至队列空）→ flush → 返回"。K3 回送因此是：resolve Promise → `.then` 链在排空期执行 → 其中的 signal 写入 → flush，全在同一事务内。事务边界与原子性结论不变
-> - **每页一 Runtime 的论证重写**：§3.4 表中"后续页面只能走源码 evaluate"是 MicroQuickJS 特有问题，作废。QuickJS 下真正的替代是"一 Runtime 多 Context"（共享堆、原子表、shape），但限额与 interrupt 是 Runtime 级、卸载 = 关 Runtime 仍是最干净的回收，结论暂不变；Runtime 基线内存与运行时模块每页重复加载的耗时在 roadmap B 组实测后可能翻
+> - **每页一 Runtime 的论证重写**：§3.4 表中"后续页面只能走源码 evaluate"是 MicroQuickJS 特有问题，作废。QuickJS 下真正的替代是"一 Runtime 多 Context"（共享堆、原子表、shape），但限额与 interrupt 是 Runtime 级、卸载 = 关 Runtime 仍是最干净的回收，结论不变。2026-09-16 在 quickjs-kmp 侧实测后不翻：Runtime + Context 基线仅 155 KB，多 Context 每页只省约 100 KB；模块缓存挂在 JSContext 上，运行时模块每页仍要各编译一遍，共享堆换不来共享 `@tiny-ui/core`；微任务队列也是 Runtime 级，多页共享会打破"一次 K 入口 = 一个事务"的页级边界。quickjs-kmp 已定为不暴露多 Context（其 docs/decisions.md「Runtime / Context」条）
 > - K0 改为"注册运行时模块（`@tiny-ui/core` / `@tiny-ui/native`）→ 求值页面模块（Promise，排空后取 namespace）→ 调 `default` 导出挂载"；"每引擎一个程序"的硬限制消失
 > - Promise 原生，J3 / K3 的对接不再需要 polyfill
 > - **新增 E7：未处理的 Promise rejection**——业务 `async` 里抛出且无人 catch，既不经入口 catch（非 E1）也非宿主失败（非 E3）；由 quickjs-kmp 接 `JS_SetHostPromiseRejectionTracker` 上报，页面继续。**E6 增加栈溢出**：`JS_SetMaxStackSize` 触发归入引擎级失败
