@@ -92,6 +92,14 @@ tinyui/
 
 约定：顶层只放这八个目录；新 npm 包进 `packages/`，新 Kotlin 模块进 `compose/` 作为子模块，不在顶层增生。ADR 文本中的"宿主"仍指 Kotlin 侧这一运行时角色，与目录名 `compose/` 不冲突。
 
+## 实现期文档
+
+不需要 ADR 但实现前必须定的方案，一项一个文件：
+
+| 文件 | 主题 | 状态 |
+|---|---|---|
+| [build-chain.md](./build-chain.md) | 构建链：TSX → ESM 模块字节码，esbuild 选型，字节码由 CLI 经 `qjsc-kmp` 生成 | 方案已定（2026-09-16），实施中 |
+
 ## 下一阶段
 
 四份 ADR 遗留项的汇总、分组与建议顺序见 [roadmap.md](./roadmap.md)，状态在那里更新。
