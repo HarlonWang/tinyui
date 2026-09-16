@@ -91,9 +91,13 @@ export function ref(): Ref {
     return r;
 }
 
-export function Fragment(props: { children?: Child | Child[] }): Node {
-    return flatten(props.children) as unknown as Node;
-}
+/** `<>…</>`: its children are spliced into the parent's; only valid in a children position. */
+export const Fragment: Component<{ children?: Child | Child[] }> = Object.assign(
+    function Fragment(props: { children?: Child | Child[] }): Node {
+        return flatten(props.children) as unknown as Node;
+    },
+    { [CONTROL]: true as const },
+);
 
 export function h(type: string | Component<any>, props: Props | null, ...children: Child[]): Node {
     if (!insideRender()) throw new Error("h() called outside a synchronous render period");

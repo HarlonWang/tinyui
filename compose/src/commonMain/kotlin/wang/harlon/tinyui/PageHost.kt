@@ -8,9 +8,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import wang.harlon.quickjs.JsEngine
 import wang.harlon.quickjs.JsEngineConfig
 import wang.harlon.quickjs.JsException
@@ -54,6 +62,7 @@ class PageHost(
         private set
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val timers = HashMap<Int, Job>()
     private val runtime = JsRuntime(JsEngineConfig(moduleScheme = MODULE_SCHEME, logger = sink::log))
     private var entries: Entries? = null
 
@@ -113,7 +122,12 @@ class PageHost(
     }
 
     fun close() {
-        scope.launch {
+        scope.cancel()
+        tree.clear()
+        timers.values.forEach { it.cancel() }
+        timers.clear()
+        // not a child of `scope`: cancelling the page must not cancel its own teardown
+        CoroutineScope(Dispatchers.Default).launch {
             try {
                 runtime.withEngine {
                     entries?.let { e -> runCatching { e.call("unmount") }; e.close() }
@@ -123,8 +137,6 @@ class PageHost(
                 runtime.close()
             }
         }
-        scope.cancel()
-        tree.clear()
     }
 
     private inline fun <T> step(what: String, block: () -> T): T =
@@ -142,18 +154,50 @@ class PageHost(
             JsValue.Undefined
         }
         engine.registerFunction("__host_report") { args ->
-            val detail = (args[1] as JsValue.Str).value
-            sink.businessError(entry = "js", message = detail, stack = null)
+            val kind = (args[0] as? JsValue.Str)?.value
+            val detail = (args[1] as? JsValue.Str)?.value ?: ""
+            val fields = runCatching { Json.parseToJsonElement(detail).jsonObject }.getOrNull()
+            if (kind == "E1" && fields != null) {
+                sink.businessError(
+                    entry = fields["entry"]?.jsonPrimitive?.contentOrNull ?: "?",
+                    message = fields["message"]?.jsonPrimitive?.contentOrNull ?: "",
+                    stack = fields["stack"]?.jsonPrimitive?.contentOrNull,
+                )
+            } else {
+                sink.businessError(entry = "?", message = "unparseable $kind report: $detail", stack = null)
+            }
             JsValue.Undefined
         }
         engine.registerFunction("__host_query") { _ -> JsValue.Str("null") }
         engine.registerFunction("__host_call") { args ->
             val name = (args[0] as JsValue.Str).value
             val cbId = (args[1] as JsValue.Num).value.toInt()
-            scope.launch { reject(cbId, """{"code":"E_UNSUPPORTED","message":"$name is not available"}""") }
+            val argsJson = (args[2] as JsValue.Str).value
+            when (name) {
+                "timer.schedule" -> schedule(cbId, argsJson)
+                else -> scope.launch { reject(cbId, """{"code":"E_UNSUPPORTED","message":"$name is not available"}""") }
+            }
             JsValue.Undefined
         }
-        engine.registerFunction("__host_send") { _ -> JsValue.Undefined }
+        engine.registerFunction("__host_send") { args ->
+            val name = (args[0] as JsValue.Str).value
+            val argsJson = (args[1] as JsValue.Str).value
+            if (name == "timer.cancel") {
+                val cbId = Json.parseToJsonElement(argsJson).jsonObject["cbId"]?.jsonPrimitive?.intOrNull
+                timers.remove(cbId)?.cancel()
+            }
+            JsValue.Undefined
+        }
+    }
+
+    /** The host side of `setTimeout` (J3 `timer.schedule` → K3 `resolve`); dies with the page. */
+    private fun schedule(cbId: Int, argsJson: String) {
+        val ms = runCatching { Json.parseToJsonElement(argsJson).jsonObject["ms"]?.jsonPrimitive?.doubleOrNull }.getOrNull() ?: 0.0
+        timers[cbId] = scope.launch {
+            delay(ms.toLong().coerceAtLeast(0))
+            timers.remove(cbId)
+            resolve(cbId, "")
+        }
     }
 
     /** The scope a component renders through. */

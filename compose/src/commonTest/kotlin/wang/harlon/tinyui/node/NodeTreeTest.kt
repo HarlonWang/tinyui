@@ -50,6 +50,20 @@ class NodeTreeTest {
     }
 
     @Test
+    fun rootIsOnlyEverAParentAndCyclesAreRejected() {
+        tree.apply("""[["c",1,"Column"],["c",2,"Column"],["i",1,2,0],["i",0,1,0]]""")
+        tree.apply("""[["r",0],["i",2,0,0],["i",2,1,0],["i",1,1,0],["p",0,"text","x"],["m",1,2,7]]""")
+        assertEquals(listOf("the root container is not a child", "the root container is not a child", "i: node already has a parent", "i: node already has a parent", "the root container is not a child", "index 7 out of [0, 0], clamped"),
+            problems.map { it.reason })
+        assertEquals(listOf(1), ids(tree.root))
+        assertEquals(listOf(2), ids(tree.node(1)!!))
+        problems.clear()
+        tree.apply("""[["m",1,2]]""")
+        assertEquals("missing index", problems.single().reason)
+        assertEquals(listOf(2), ids(tree.node(1)!!), "a rejected move leaves the list untouched")
+    }
+
+    @Test
     fun badOpsAreSkippedAndReported() {
         tree.apply("""[["c",1,"Text"],["p",1,"nope","x"],["p",1,"fontSize","big"],["p",1,"onTap",true],["p",99,"text","x"],["c",2,"pp.Unknown"],["i",0,2,7],["x",1,"focus",{}],["i",0,1,0]]""")
         val expected = listOf("prop not in schema", "cannot convert", "event not in schema", "unknown node 99", "unknown component type", "index 7 out of", "command not in schema")

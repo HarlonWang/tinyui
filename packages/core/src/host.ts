@@ -52,14 +52,26 @@ export function resolvePending(cbId: number, resultJson: string): void {
     const p = pending.get(cbId);
     if (!p) return;
     pending.delete(cbId);
-    p.resolve(resultJson === "" ? undefined : JSON.parse(resultJson));
+    let value: unknown;
+    try {
+        value = resultJson === "" ? undefined : JSON.parse(resultJson);
+    } catch (e) {
+        p.reject(new HostError("E_BAD_JSON", `host result is not JSON: ${(e as Error).message}`));
+        return;
+    }
+    p.resolve(value);
 }
 
 export function rejectPending(cbId: number, errorJson: string): void {
     const p = pending.get(cbId);
     if (!p) return;
     pending.delete(cbId);
-    const e = JSON.parse(errorJson) as { code?: string; message?: string };
+    let e: { code?: string; message?: string } = {};
+    try {
+        e = JSON.parse(errorJson) as { code?: string; message?: string };
+    } catch {
+        e = { code: "E_BAD_JSON", message: errorJson };
+    }
     p.reject(new HostError(e.code ?? "unknown", e.message ?? "host call failed"));
 }
 

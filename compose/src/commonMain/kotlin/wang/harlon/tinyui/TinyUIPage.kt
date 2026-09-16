@@ -20,7 +20,7 @@ fun TinyUIPage(
     modifier: Modifier = Modifier,
     error: @Composable (PageFailure) -> Unit = { Text("TinyUI page failed (${it.kind}): ${it.message}") },
 ) {
-    val host = remember(page) { PageHost(runtime, page, registry, sink, propsJson) }
+    val host = remember(runtime, page, registry, sink, propsJson) { PageHost(runtime, page, registry, sink, propsJson) }
     DisposableEffect(host) {
         host.start()
         onDispose { host.close() }

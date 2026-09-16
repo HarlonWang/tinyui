@@ -108,6 +108,8 @@ async function bundlePages(root: string, out: string, pages: Map<string, string>
         entryPoints: [...pages].map(([name, file]) => ({ in: file, out: name.slice("pages/".length) })),
         outdir,
         outbase: join(root, "src", "pages"),
+        // the project's tsconfig says react-jsx for type checking; the output is classic h() regardless
+        tsconfigRaw: { compilerOptions: { jsx: "react", jsxFactory: "h", jsxFragmentFactory: "Fragment" } },
         jsx: "transform",
         jsxFactory: "h",
         jsxFragment: "Fragment",

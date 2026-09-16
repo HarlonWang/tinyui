@@ -14,9 +14,9 @@ describe("createResource + K3", () => {
             const [user, { loading }] = createResource(() => call<{ name: string }>("http.get", { url: "/me" }));
             return h(Column, null, h(Text, { text: thunk(() => loading() ? "loading" : user()!.name) }));
         });
-        assert.deepEqual(bridge.calls, [{ name: "http.get", cbId: 1, args: { url: "/me" } }]);
+        assert.deepEqual(bridge.calls.map((c) => [c.name, c.args]), [["http.get", { url: "/me" }]]);
         assert.deepEqual(bridge.ops().filter((o) => o[0] === "p"), [["p", 1, "text", "loading"]]);
-        tinyui().resolve(1, JSON.stringify({ name: "harlon" }));
+        tinyui().resolve(bridge.calls[0]!.cbId, JSON.stringify({ name: "harlon" }));
         await drain();
         const before = bridge.applied.length;
         tinyui().flush();
@@ -29,13 +29,25 @@ describe("createResource + K3", () => {
             const [, { error }] = createResource(() => call("http.get"));
             return h(Column, null, h(Text, { text: thunk(() => { const e = error(); return e instanceof HostError ? e.code : "ok"; }) }));
         });
-        tinyui().reject(2, JSON.stringify({ code: "E_NET", message: "offline" }));
+        tinyui().reject(bridge.calls.at(-1)!.cbId, JSON.stringify({ code: "E_NET", message: "offline" }));
         await drain();
         const before = bridge.applied.length;
         tinyui().flush();
         assert.deepEqual(bridge.applied.slice(before).flat(), [["p", 1, "text", "E_NET"]]);
         assert.equal(bridge.reports.length, 0);
         unmount();
+    });
+
+    it("a non-JSON host result rejects instead of hanging", async () => {
+        mount(() => {
+            const [, { error, loading }] = createResource(() => call("x"));
+            return h(Column, null, h(Text, { text: thunk(() => loading() ? "loading" : String((error() as HostError).code)) }));
+        });
+        tinyui().resolve(bridge.calls.at(-1)!.cbId, "{not json");
+        await drain();
+        const before = bridge.applied.length;
+        tinyui().flush();
+        assert.deepEqual(bridge.applied.slice(before).flat(), [["p", 1, "text", "E_BAD_JSON"]]);
     });
 
     it("a result arriving after unmount is dropped", async () => {

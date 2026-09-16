@@ -19,7 +19,7 @@ class PageHostTest {
     private val log = mutableListOf<String>()
     private val sink = object : PageSink {
         override fun patchProblem(problem: PatchProblem) { log += "E5 $problem" }
-        override fun businessError(entry: String, message: String, stack: String?) { log += "E1 $message" }
+        override fun businessError(entry: String, message: String, stack: String?) { log += "E1 $message @$entry stack=${stack != null}" }
         override fun log(line: String) { log += line }
     }
 
@@ -33,8 +33,13 @@ class PageHostTest {
                              ["c",2,"Button"],["p",2,"text","+1"],["p",2,"onClick",true],["c",3,"Column"],["i",3,1,0],["i",3,2,1],["i",0,3,0]);
                 handler = () => { count++; patches.push(["p",1,"text","count " + count]); };
             },
-            unmount() {}, visible() {}, resolve() {}, reject() {}, emit() {},
-            dispatch(id, event) { if (id === 2 && event === "onClick") handler(); if (event === "onBoom") throw new Error("boom"); },
+            unmount() {}, visible() {}, emit() {},
+            resolve(cbId) { patches.push(["p",1,"text","timer " + cbId]); }, reject() {},
+            dispatch(id, event) {
+                if (id === 2 && event === "onClick") handler();
+                if (event === "onTimer") __host_call("timer.schedule", 7, JSON.stringify({ ms: 10 }));
+                if (event === "onBoom") { try { throw new Error("boom"); } catch (e) { __host_report("E1", JSON.stringify({ entry: "dispatch", message: e.message, stack: e.stack })); } }
+            },
             flush() { if (count > 2) throw new Error("render exploded"); if (patches.length) { __host_apply(JSON.stringify(patches)); patches = []; } },
         };
         export const VERSION = "stub";
@@ -75,6 +80,18 @@ class PageHostTest {
         host.dispatch(2, "onClick", "{}")
         host.await { host.tree.node(1)!!.props["text"] == "count 2" }
         assertNull(host.failure)
+        host.close()
+    }
+
+    @Test
+    fun timersComeBackThroughResolveAndE1ReportsKeepTheirFields() = runTest {
+        val host = host()
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        host.dispatch(2, "onTimer", "{}")
+        host.await { host.tree.node(1)!!.props["text"] == "timer 7" }
+        host.dispatch(2, "onBoom", "{}")
+        host.await { log.any { it.startsWith("E1 boom") } }
         host.close()
     }
 

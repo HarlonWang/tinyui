@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { mount, tinyui, transaction, unmount } from "./helpers.ts";
-import { Button, Column, h, onCleanup, ref, signal, Text, thunk } from "../src/index.ts";
+import { Button, Column, Fragment, h, onCleanup, ref, signal, Text, thunk } from "../src/index.ts";
 
 function Counter() {
     const [count, setCount] = signal(0);
@@ -91,6 +91,13 @@ describe("Counter end to end", () => {
         unmount();
         assert.throws(() => mount(() => h(function Bad() { return [h(Text, { text: "a" })]; } as never, null)), /must return exactly one node, got several/);
         unmount();
+    });
+
+    it("a Fragment splices its children into the parent", () => {
+        const ops = mount(() => h(Column, null, h(Text, { text: "a" }), h(Fragment, null, h(Text, { text: "b" }), h(Text, { text: "c" })), h(Text, { text: "d" })));
+        assert.deepEqual(ops.filter((o) => o[0] === "i"), [["i", 5, 1, 0], ["i", 5, 2, 1], ["i", 5, 3, 2], ["i", 5, 4, 3], ["i", 0, 5, 0]]);
+        unmount();
+        assert.throws(() => mount(() => h(Fragment, null, h(Text, { text: "a" })) as never), /page must return exactly one node/);
     });
 
     it("ref + cmd emits an x op in the current transaction", () => {

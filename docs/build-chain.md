@@ -25,6 +25,8 @@ src/pages/home.tsx ──esbuild──▶ dist/pages/home.js + .map ──qjsc-k
 
 **页面名即模块名**：`src/pages/home.tsx` → `pages/home`，子目录保留路径，无后缀无前缀（ADR-005 §4）。运行时模块名固定 `@tiny-ui/core`、`@tiny-ui/native`。产物目录 `runtime/*.bin`、`pages/**/*.bin`、`manifest.json`（页面与运行时模块清单，Kotlin 侧路由表的来源，见 [app-model.md](./app-model.md)）。
 
+业务工程的 tsconfig 用 `jsx: "react-jsx"` + `jsxImportSource: "@tiny-ui/core"` 做类型检查（[jsx-transform.md](./jsx-transform.md) §4），而 esbuild 会读到这份 tsconfig 并按它产出 `import { jsx } from "@tiny-ui/core/jsx-runtime"`，即使 `build()` 显式传了 `jsx: "transform"`；引擎里没有这个模块，加载报 `module '@tiny-ui/core/jsx-runtime' is not registered`（2026-09-16 CI 实测）。页面构建要传 `tsconfigRaw` 覆盖 tsconfig 的 jsx 三项。
+
 `inject` 的 import 不能只写 `external` 配置项：esbuild 对 `external` 列表里的模块一律保留 import（当作有副作用），无 JSX 的页面也会 `import { h } from "@tiny-ui/core"`，引擎链接模块时因 core 没有该导出而报 `SyntaxError`（2026-09-16 Android 模拟器实测）。走插件 `onResolve` 返回 `sideEffects: false` 才会被摇掉。
 
 ## 3. 页面即构建单元

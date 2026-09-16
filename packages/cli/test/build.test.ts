@@ -33,6 +33,12 @@ describe("tinyui build", () => {
         assert.doesNotMatch(js, /interface Props|: Props/, "types are erased");
     });
 
+    it("ignores the project's react-jsx tsconfig: output is h(), never a jsx-runtime import", async () => {
+        const js = await readFile(join(out, "pages", "home.js"), "utf8");
+        assert.doesNotMatch(js, /jsx-runtime/);
+        assert.match(js, /h\(Column/);
+    });
+
     it("inlines relative imports and keeps @tiny-ui/* as bare specifiers", async () => {
         const js = await readFile(join(out, "pages", "home.js"), "utf8");
         assert.match(js, /function title\(name\)/, "../lib/format.ts is bundled in");

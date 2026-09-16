@@ -76,7 +76,7 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     }
 
     private fun setProp(f: JsonArray, op: JsonElement) {
-        val node = target(f, op) ?: return
+        val node = child(f, op, at = 1) ?: return
         val key = f.string(2) ?: return report(PatchProblem(op.toString(), "p without key"))
         val value = f.getOrNull(3) ?: JsonNull
         val schema = registry.schema(node.type) ?: return
@@ -98,8 +98,9 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
 
     private fun insert(f: JsonArray, op: JsonElement) {
         val parent = f.int(1)?.let { nodes[it] } ?: return report(PatchProblem(op.toString(), "i: unknown parent"))
-        val node = f.int(2)?.let { nodes[it] } ?: return report(PatchProblem(op.toString(), "i: unknown node"))
+        val node = child(f, op) ?: return
         if (node.parent != null) return report(PatchProblem(op.toString(), "i: node already has a parent"))
+        if (node === parent || isAncestor(node, of = parent)) return report(PatchProblem(op.toString(), "i: would create a cycle"))
         val index = clamp(f.int(3), parent.children.size, op) ?: return
         node.parent = parent
         parent.children.add(index, node)
@@ -107,22 +108,36 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
 
     private fun move(f: JsonArray, op: JsonElement) {
         val parent = f.int(1)?.let { nodes[it] } ?: return report(PatchProblem(op.toString(), "m: unknown parent"))
-        val node = f.int(2)?.let { nodes[it] } ?: return report(PatchProblem(op.toString(), "m: unknown node"))
+        val node = child(f, op) ?: return
         if (node.parent !== parent) return report(PatchProblem(op.toString(), "m: node is not a child of parent"))
+        val index = clamp(f.int(3), parent.children.size - 1, op) ?: return
         parent.children.remove(node)
-        val index = clamp(f.int(3), parent.children.size, op) ?: run { parent.children.add(node); return }
         parent.children.add(index, node)
     }
 
     private fun remove(f: JsonArray, op: JsonElement) {
-        val node = target(f, op) ?: return
+        val node = child(f, op, at = 1) ?: return
         node.parent?.children?.remove(node)
         node.parent = null
         forget(node)
     }
 
+    /** Ops that act on a node as a child never target the root container. */
+    private fun child(f: JsonArray, op: JsonElement, at: Int = 2): UiNode? {
+        val id = f.int(at) ?: run { report(PatchProblem(op.toString(), "op without node id")); return null }
+        val node = nodes[id] ?: run { report(PatchProblem(op.toString(), "unknown node $id")); return null }
+        if (node.id == ROOT_ID) { report(PatchProblem(op.toString(), "the root container is not a child")); return null }
+        return node
+    }
+
+    private fun isAncestor(node: UiNode, of: UiNode): Boolean {
+        var n: UiNode? = of.parent
+        while (n != null) { if (n === node) return true; n = n.parent }
+        return false
+    }
+
     private fun command(f: JsonArray, op: JsonElement) {
-        val node = target(f, op) ?: return
+        val node = child(f, op, at = 1) ?: return
         val name = f.string(2) ?: return report(PatchProblem(op.toString(), "x without name"))
         val schema = registry.schema(node.type) ?: return
         if (name !in schema.commands) return report(PatchProblem(op.toString(), "command not in schema of ${node.type}"))
@@ -133,11 +148,6 @@ class NodeTree(private val registry: ComponentRegistry, private val report: (Pat
     private fun forget(node: UiNode) {
         nodes.remove(node.id)
         for (child in node.children) forget(child)
-    }
-
-    private fun target(f: JsonArray, op: JsonElement): UiNode? {
-        val id = f.int(1) ?: run { report(PatchProblem(op.toString(), "op without id")); return null }
-        return nodes[id] ?: run { report(PatchProblem(op.toString(), "unknown node $id")); null }
     }
 
     private fun clamp(index: Int?, size: Int, op: JsonElement): Int? {
