@@ -76,7 +76,7 @@ li { margin-bottom: 6px; }
 </head>
 <body>
 <main>
-<div class="eyebrow">TinyUI · docs · 草案 2026-09-16</div>
+<div class="eyebrow">TinyUI · docs · 已定 2026-09-16</div>
 <h1>JS 层总览：从 TSX 到 patch</h1>
 <p class="lede">本页是 JS 层的系统说明。三份契约 <a href="./runtime-api.md">runtime-api.md</a>、<a href="./jsx-transform.md">jsx-transform.md</a>、<a href="./patch-protocol.md">patch-protocol.md</a> 是它的参考手册：定义在那边，"为什么"和"怎么连起来"在这边。前提是 ADR-001（Signal、所有权）、ADR-002（事务、桥）、ADR-004（命令）、ADR-005（引擎、模块）。</p>
 <nav class="toc">
@@ -383,7 +383,7 @@ function TodoRow(props) {
 <tr><td>组件函数只跑一次，必须同步返回一个节点</td><td><code>async</code> / 返回 Promise 抛 E2</td><td>§2：<code>await</code> 之后已在渲染期外；§1：组件不在图里，没有第二次机会</td></tr>
 <tr><td>children 创建后不可变；结构变化只经 <code>For</code> / <code>Show</code></td><td>编译期报错</td><td>§1：只有 <code>For</code> / <code>Show</code> 开 owner，别处建的节点没人负责删</td></tr>
 <tr><td><code>For</code> / <code>Show</code> 只能直接写在内置节点的 children 里</td><td><code>h()</code> 抛 E2</td><td>§1：槽位表挂在内置节点上，它们需要一个父节点来算 index</td></tr>
-<tr><td>动态 prop 由编译器包 <code>thunk</code>，值本身不能是函数</td><td>函数型 prop 抛 E2</td><td>§4.1：运行时靠包装区分"动态 prop"与"渲染函数"；ADR-002：函数不过桥</td></tr>
+<tr><td>内置 / 宿主节点的 prop 不能是函数（<code>on*</code> 除外）；业务组件的 prop 不限</td><td><code>h()</code> / <code>bindProp</code> 抛 E2，抓的是 <code>text={fmt}</code> 忘了调用</td><td>ADR-002：函数不过桥，边界就是 patch；业务组件之间是纯 JS 调用</td></tr>
 <tr><td>数组 / 对象整体替换才触发</td><td><code>list().push(x)</code> 静默无效</td><td>§3：<code>===</code> 判等；v1 没有 Proxy 追踪</td></tr>
 <tr><td><code>For</code> 的 item 是 accessor</td><td>写 <code>todo.title</code> 类型错</td><td>§4.4：同 key 元素换引用时更新行而不重建行</td></tr>
 <tr><td><code>Show</code> 只在真值性变化时切分支</td><td></td><td>§4.2：切分支 = 重建整棵分支，值变化不该付这个代价</td></tr>

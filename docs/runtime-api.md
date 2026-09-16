@@ -1,6 +1,6 @@
 # JS 运行时 API：`@tiny-ui/core` v1
 
-- 状态：草案（2026-09-16），待确认后定稿；定稿后是 M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
+- 状态：已定（2026-09-16）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
 - 来源：ADR-001（Signal、所有权）、ADR-002（桥入口、事务、错误）、ADR-004（ref + cmd、事件 payload）、ADR-005（组件函数必须同步、`createResource`、原生 Promise）
 - 范围：业务可见的 API、它们的精确语义、页面模块契约、以及运行时与 Kotlin 之间的桥入口（内部契约）。JSX 写法如何变成对这些 API 的调用见 [jsx-transform.md](./jsx-transform.md)；产出的 patch 形态见 [patch-protocol.md](./patch-protocol.md)
 
@@ -97,12 +97,14 @@ type Child = Node | Node[] | null | undefined | false
 |---|---|
 | `ref` | 把节点 id 填进 `Ref`，不过桥 |
 | `on[A-Z]…` | 值必须是函数；存进 handler 表，发 `["p", id, name, true]` |
-| `thunk(fn)` 包过的 | 建 effect 绑定：跑 `fn`，结果与上次 `!==` 时发 `p`（第一次总发） |
-| 其余 | 静态值，发一次 `p`。允许 string / number / boolean / null；函数、对象、数组抛 E2（prop 摊平，ADR-002） |
+| `thunk(fn)` 包过的 | 建 effect 绑定：跑 `fn`，结果与上次 `!==` 时发 `p`（第一次总发）；结果是函数 / 对象 / 数组抛 E2 |
+| 其余 | 静态值，发一次 `p`。允许 string / number / boolean / null / undefined（后两者都发 `null`，恢复默认）；函数、对象、数组抛 E2（prop 摊平，ADR-002），典型是 `text={fmt}` 忘了调用 |
+
+内置 / 宿主节点的 prop 类型集是封闭的，因为它们全部要变成 patch、函数不过桥；这个限制**只在这里**。
 
 children 展平（数组、`Fragment`、`null` / `false` 忽略）后按顺序发 `i`。**children 在创建后不可变**：结构变化只经 `For` / `Show`。
 
-**业务组件**（`type` 为函数）：把 props 里 `thunk` 包过的项转成 getter 属性、children 放进 `props.children`，调用一次 `type(props)`，返回值原样作为本节点。组件函数：
+**业务组件**（`type` 为函数）：把 props 里 `thunk` 包过的项转成 getter 属性、其余原样复制（**任何值都合法，含函数、对象、数组**：render prop、格式化函数都是普通用法，它们不过桥）、children 放进 `props.children`，调用一次 `type(props)`，返回值原样作为本节点。组件函数：
 
 - 只跑一次，函数体就是挂载逻辑；没有 `useEffect`，需要副作用用 `effect`
 - 读 `props.title` 拿到的是实时值（getter），在 effect 里读会订阅；组件不该把它解构成常量再用

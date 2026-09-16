@@ -1,6 +1,6 @@
 # JSX 变换：CLI 把 TSX 编成 `h()` 调用的规则
 
-- 状态：草案（2026-09-16），待确认后定稿
+- 状态：已定（2026-09-16）
 - 来源：ADR-001 修订"thunk 写法改由编译器生成"、ADR-005 §4"CLI 只做 TS 擦除与 JSX → `h()`，source map"；运行时侧的接收形态见 [runtime-api.md](./runtime-api.md) §3
 - 位置：`@tiny-ui/cli` 在 esbuild 的 `onLoad` 里对每个 `.tsx` 先跑本文的 pass，再交给 esbuild 做 JSX → `h()`、TS 擦除与合并（[build-chain.md](./build-chain.md) §4.4 预留的出口）
 
@@ -34,6 +34,20 @@ h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.prima
 判据同 Solid 的 `isDynamic`：signal 读取一定是调用或属性访问，纯标识符不可能是响应式的。误包（`Math.max(a, b)`）只多一个跑一次的 effect。
 
 **字符串属性** `text="hi"` 与 `{...}` 里的字面量都是静态值。
+
+判据看的是表达式的**形状**，不看值是不是函数：`format={(n) => n + "¥"}` 是函数表达式，不包，函数原样到达组件；`text={fmt(price)}` 是调用，包，哪怕 `fmt` 不是 signal（空跑一次的 effect 是唯一代价）。
+
+| 写法 | 结果 |
+|---|---|
+| `text={label}` | 不包：标识符 |
+| `text={"Count: " + count()}` | 包：含调用 |
+| `text={`${a} / ${b}`}` | 不包：模板里只有标识符 |
+| `text={cond ? a() : b()}` | 包：分支里有调用 |
+| `style={{ padding: 8 }}` | 不包：对象里全是字面量 |
+| `style={{ padding: gap() }}` | 包：整个对象包一层 |
+| `text={props.title}` | 包：属性访问（`props` 上是 getter） |
+| `text={Math.max(a, b)}` | 包：误包，一个空跑 effect |
+| `key={(t) => t.id}` | 不包：属性名在永不包列表 |
 
 ## 3. 编译期报错
 

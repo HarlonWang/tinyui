@@ -1,6 +1,6 @@
 # patch 协议 v1
 
-- 状态：草案（2026-09-16），待确认后定稿；定稿后 bench 的 verify 模式与 Kotlin 解析器都以此为准
+- 状态：已定（2026-09-16）；bench 的 verify 模式与 Kotlin 解析器都以此为准
 - 来源：ADR-001（五种 op 草案）、ADR-002 §3.6（JSON 文本、数组形态、prop 摊平）、ADR-003 §3.4 / §3.5（写入时转换、E5、事件标记）、ADR-004 §3.2（`x` 命令 op）
 - 两侧：JS 运行时的 `flush()` 产出；Kotlin `NodeTree.apply` 流式解析并写入
 
@@ -61,7 +61,9 @@ Kotlin 侧承诺（ADR-003 §3.2）：
 
 ## 6. 版本
 
-消息本身不带版本号。运行时导出 `PROTOCOL = 1`，并作为 `__tinyui.protocol` 暴露；Kotlin 在 K0 之后核对，与自身实现的版本不等即 E6（字节码与宿主不匹配，页面失败）。改本文任何一条语义都要递增。
+消息本身不带版本号：版本是运行时模块的属性，每页加载一次、核对一次。运行时导出 `PROTOCOL = 1`，并作为 `__tinyui.protocol` 暴露；Kotlin 在 K0 之后核对，与自身实现的版本不等即 E6（页面失败，同"字节码与引擎不匹配"）。
+
+递增规则：改本文任何一条语义（op 字段位置、`index` 含义、`null` 含义、事件标记形态）或新增 op 种类都递增；schema 层面的变化（新组件、新 prop、新事件）不递增，那由 ADR-003 的清单下发与 E5 跳过处理。
 
 ## 7. Kotlin 侧的 E5 处理
 
@@ -83,4 +85,5 @@ Kotlin 侧承诺（ADR-003 §3.2）：
 
 - `__host.apply(json, count)` 的 `count` 参数去掉
 - 新增 `x`
-- `p` 的 `null` 语义（恢复默认）与事件标记 `false`（撤销 handler）是新定的；bench 里未出现
+- `p` 的 `null` 语义（恢复默认）是新定的：运行时对 `undefined` 与 `null` 都发 `null`，Kotlin 写回 schema 默认值，组件永远读不到 null。推论：schema 不能声明"合法值就是 null"的 prop，"空"用空串或枚举值表达
+- 事件标记 `false`（撤销 handler）：Kotlin 解析器实现它（从事件集合删除、卸下手势），但 v1 运行时没有撤销 API、不会主动发。协议先于运行时能力，将来 `on*` 支持动态绑定时不用改版本
