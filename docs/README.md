@@ -101,6 +101,10 @@ tinyui/
 |---|---|---|
 | [build-chain.md](./build-chain.md) | 构建链：TSX → ESM 模块字节码，esbuild 选型，字节码由 CLI 经 `qjsc-kmp` 生成 | 已完成（2026-09-16） |
 | [app-model.md](./app-model.md) | 应用模型：路由、生命周期、跨页状态在 Kotlin；页面之间经 Kotlin 中转的四种通信 | 已对齐（2026-09-16），API 面归 C 组 |
+| [js-runtime.md](./js-runtime.md) | **JS 层总览**：七样运行时对象、四个时期、响应式闭环、一个页面的一生、规则表。先读这份 | 草案（2026-09-16） |
+| [runtime-api.md](./runtime-api.md) | `@tiny-ui/core` v1 的 API 定义、页面模块契约、桥入口 | 草案（2026-09-16），待确认 |
+| [jsx-transform.md](./jsx-transform.md) | CLI 的 JSX 变换：thunk 包裹规则、编译期报错、source map | 草案（2026-09-16），待确认 |
+| [patch-protocol.md](./patch-protocol.md) | patch 协议 v1：六种 op、id、值、顺序保证、版本、E5 | 草案（2026-09-16），待确认 |
 
 ## 下一阶段
 
