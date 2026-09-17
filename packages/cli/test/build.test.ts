@@ -63,7 +63,9 @@ describe("tinyui build", () => {
             assert.ok(map.sources.length > 0, `${m.name} has sources`);
         }
         const home = JSON.parse(await readFile(join(out, "pages", "home.js.map"), "utf8")) as { sources: string[] };
-        assert.ok(home.sources.some((s) => s.endsWith("src/pages/home.tsx")));
+        assert.ok(home.sources.includes("src/pages/home.tsx"), `sources are root-relative: ${home.sources}`);
+        const core = JSON.parse(await readFile(join(out, "runtime", "core.js.map"), "utf8")) as { sources: string[] };
+        assert.ok(core.sources.every((s) => s.includes(":") || !s.startsWith("/")), `runtime sources are relative: ${core.sources}`);
     });
 
     it("bundles each runtime module on its own", async () => {
@@ -86,10 +88,11 @@ describe("tinyui build", () => {
 
     it("lists everything in manifest.json", async () => {
         const manifest = JSON.parse(await readFile(result.manifest, "utf8"));
-        assert.deepEqual(manifest, {
-            runtime: ["@tiny-ui/core", "@tiny-ui/native"],
-            pages: ["pages/home", "pages/nested/detail"],
-        });
+        assert.deepEqual(manifest.runtime, ["@tiny-ui/core", "@tiny-ui/native"]);
+        assert.deepEqual(manifest.pages, ["pages/home", "pages/nested/detail"]);
+        assert.deepEqual(Object.keys(manifest.buildIds), [...manifest.runtime, ...manifest.pages]);
+        for (const id of Object.values(manifest.buildIds)) assert.match(id as string, /^[0-9a-f]{8}$/);
+        assert.equal(manifest.buildIds["pages/home"], result.pages[0]!.buildId);
     });
 
     it("compiles every module to bytecode when qjsc-kmp is available", { skip: !process.env["TINYUI_QJSC"] && "TINYUI_QJSC not set" }, async () => {

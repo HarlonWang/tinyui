@@ -71,7 +71,7 @@ h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.prima
 
 ## 5. source map
 
-本 pass 用字符串局部替换生成 map，以内联 `sourceMappingURL` 交给 esbuild；esbuild 与自己的 JSX / 合并 map 组合后输出 `pages/<name>.js.map`，`sources` 指向原 `.tsx`。字节码保留行号（`--strip-source`），E1 / E2 的栈里是 `.js` 的行列，经 `.js.map` 回到 `.tsx`，这一步在错误上报那一期做。
+本 pass 用字符串局部替换生成 map，以内联 `sourceMappingURL` 交给 esbuild；esbuild 与自己的 JSX / 合并 map 组合后输出 `pages/<name>.js.map`，`sources` 指向原 `.tsx`。字节码保留行列（`--strip-source`），E1 / E2 的栈里是 `.js` 的行列，经 `.js.map` 回到 `.tsx`（[build-chain.md](./build-chain.md) §7）。
 
 ## 6. 实现（非契约）
 

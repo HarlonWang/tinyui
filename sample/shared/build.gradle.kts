@@ -65,7 +65,11 @@ val buildTinyUIPages by tasks.registering(Exec::class) {
 }
 
 val collectTinyUIResources by tasks.registering(Sync::class) {
-    from(buildTinyUIPages) { include("**/*.bin", "manifest.json") }
+    // maps ride along for the debug-only failure screen (docs/build-chain.md); -Ptinyui.maps=false leaves them out
+    from(buildTinyUIPages) {
+        include("**/*.bin", "manifest.json")
+        if (providers.gradleProperty("tinyui.maps").orNull != "false") include("**/*.js.map")
+    }
     into(layout.buildDirectory.dir("tinyui-resources/files/tinyui"))
 }
 

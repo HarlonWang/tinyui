@@ -8,6 +8,8 @@ declare const __host_report: (kind: string, detailJson: string) => void;
 interface Pending {
     resolve: (value: unknown) => void;
     reject: (error: HostError) => void;
+    /** Stack at the J3 call: a rejection's own stack would only show the K3 entry. */
+    site?: string;
 }
 
 export class HostError extends Error {
@@ -33,8 +35,9 @@ export function query<T>(name: string, args: Record<string, unknown> = {}): T {
 /** J3: asynchronous capability; settles when the host calls K3. */
 export function call<T>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     const cbId = nextCbId++;
+    const site = new Error().stack;
     return new Promise<T>((resolve, reject) => {
-        pending.set(cbId, { resolve: resolve as (v: unknown) => void, reject });
+        pending.set(cbId, { resolve: resolve as (v: unknown) => void, reject, ...(site !== undefined && { site }) });
         __host_call(name, cbId, JSON.stringify(args));
     });
 }
@@ -72,7 +75,9 @@ export function rejectPending(cbId: number, errorJson: string): void {
     } catch {
         e = { code: "E_BAD_JSON", message: errorJson };
     }
-    p.reject(new HostError(e.code ?? "unknown", e.message ?? "host call failed"));
+    const error = new HostError(e.code ?? "unknown", e.message ?? "host call failed");
+    if (p.site !== undefined) error.stack = p.site;
+    p.reject(error);
 }
 
 export function cancelPending(cbId: number): void {

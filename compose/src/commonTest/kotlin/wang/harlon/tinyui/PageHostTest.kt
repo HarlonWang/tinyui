@@ -8,7 +8,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import wang.harlon.quickjs.JsBytecode
 import wang.harlon.tinyui.components.registerBuiltins
-import wang.harlon.tinyui.node.PatchProblem
 import wang.harlon.tinyui.schema.ComponentRegistry
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,9 +17,9 @@ import kotlin.test.assertNull
 /** Drives PageHost with a hand-written stand-in for `@tiny-ui/core`: the K/J entry shapes, not the real runtime. */
 class PageHostTest {
     private val log = mutableListOf<String>()
+    private val errors = mutableListOf<PageError>()
     private val sink = object : PageSink {
-        override fun patchProblem(problem: PatchProblem) { log += "E5 $problem" }
-        override fun businessError(entry: String, message: String, stack: String?) { log += "E1 $message @$entry stack=${stack != null}" }
+        override fun error(error: PageError) { errors += error; log += error.toString() }
         override fun log(line: String) { log += line }
     }
 
@@ -41,6 +40,7 @@ class PageHostTest {
                 if (id === 2 && event === "onClick") handler();
                 if (event === "onTimer") __host_call("timer.schedule", 7, JSON.stringify({ ms: 10 }));
                 if (event === "onBoom") { try { throw new Error("boom"); } catch (e) { __host_report("E1", JSON.stringify({ entry: "dispatch", message: e.message, stack: e.stack })); } }
+                if (event === "onReject") Promise.reject(new Error("nobody catches"));
                 if (event === "onQuery") patches.push(["p",1,"text", __host_query("store.get", JSON.stringify({ key: "cart" })) + "|" + __host_query("i18n.t", JSON.stringify({ key: "hi" })) + "|" + JSON.parse(__host_query("device.info", "{}")).os]);
                 if (event === "onHttp") __host_call("http.request", 9, JSON.stringify({ method: "GET", url: "/todos" }));
                 if (event === "onSubscribe") { __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); patches.push(["p",1,"text","subscribed"]); }
@@ -52,7 +52,7 @@ class PageHostTest {
         export const VERSION = "stub";
     """)
     private val native = module("@tiny-ui/native", "export const NATIVE = 1;")
-    private val page = module("pages/counter", "export default function Counter() { return 'page'; }")
+    private val page = PageModule("pages/counter", module("pages/counter", "export default function Counter() { return 'page'; }"), "abcd1234")
 
     private val store = InMemoryStore().apply { set("cart", """{"n":2}""") }
     private val services = HostServices(
@@ -65,7 +65,8 @@ class PageHostTest {
         },
     )
 
-    private fun host(props: String = "{}") = PageHost(RuntimeBundle(core, native), page, ComponentRegistry().registerBuiltins(), sink, services, props)
+    private fun host(props: String = "{}", maps: SourceMaps = SourceMaps.EMPTY) =
+        PageHost(RuntimeBundle(core, native), page, ComponentRegistry().registerBuiltins(), sink, services, props, sourceMaps = maps)
 
     // runTest's virtual time never advances the real engine thread: wait on a real dispatcher
     private suspend fun PageHost.await(check: () -> Boolean) =
@@ -113,7 +114,48 @@ class PageHostTest {
         host.dispatch(2, "onTimer", "{}")
         host.await { host.tree.node(1)!!.props["text"] == "timer 7" }
         host.dispatch(2, "onBoom", "{}")
-        host.await { log.any { it.startsWith("E1 boom") } }
+        host.await { errors.any { it.kind == "E1" } }
+        val e = errors.single { it.kind == "E1" }
+        assertEquals("boom", e.message)
+        assertEquals("dispatch", e.entry)
+        assertEquals("pages/counter", e.page)
+        assertEquals("abcd1234", e.buildId)
+        val frame = e.frames.first()
+        assertEquals("dispatch", frame.function)
+        assertEquals("@tiny-ui/core", frame.file, "engine frames name the module; stack=${e.jsStack}")
+        assertEquals(16, frame.line)
+        assertNotNull(frame.column, "bytecode compiled with --strip-source keeps columns; stack=${e.jsStack}")
+        host.close()
+    }
+
+    @Test
+    fun framesAreMappedThroughTheModuleSourceMap() = runTest {
+        // generated line 16 → src/core.ts line 3 column 7: fifteen empty groups, then one segment [0, 0, 2, 6]
+        val map = SourceMaps(mapOf("@tiny-ui/core" to """{"version":3,"sources":["src/core.ts"],"mappings":";;;;;;;;;;;;;;;AAEM"}"""))
+        val host = host(maps = map)
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        host.dispatch(2, "onBoom", "{}")
+        host.await { errors.any { it.kind == "E1" } }
+        val frame = errors.single { it.kind == "E1" }.frames.first()
+        assertEquals(true, frame.mapped)
+        assertEquals("src/core.ts", frame.file)
+        assertEquals(3, frame.line)
+        assertEquals(7, frame.column)
+        host.close()
+    }
+
+    @Test
+    fun unhandledRejectionsAreE7() = runTest {
+        val host = host()
+        host.start()
+        host.await { host.tree.root.children.isNotEmpty() }
+        host.dispatch(2, "onReject", "{}")
+        host.await { errors.any { it.kind == "E7" } }
+        val e = errors.single { it.kind == "E7" }
+        assertEquals(true, "nobody catches" in e.message, e.message)
+        assertEquals(true, e.frames.isNotEmpty(), "stack=${e.jsStack}")
+        assertNull(host.failure)
         host.close()
     }
 
@@ -149,6 +191,8 @@ class PageHostTest {
         val failure = assertNotNull(host.failure)
         assertEquals("E2", failure.kind)
         assertEquals(true, "render exploded" in failure.message)
+        assertEquals(true, failure.error.frames.any { it.function == "flush" && it.file == "@tiny-ui/core" }, "stack=${failure.error.jsStack}")
+        assertEquals(1, errors.count { it.kind == "E2" }, "E2 goes through the sink once")
         host.close()
     }
 
@@ -159,6 +203,7 @@ class PageHostTest {
         host.start()
         host.await { host.failure != null }
         assertEquals("E6", host.failure!!.kind)
+        assertEquals("E6", errors.single().kind)
         host.close()
     }
 

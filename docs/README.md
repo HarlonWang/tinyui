@@ -40,7 +40,7 @@ JS                                   桥                          Kotlin
 | 编号 | 主题 | 状态 | 结论 |
 |---|---|---|---|
 | [ADR-001](./adr-001-reactivity-model.md) | 状态管理与更新模型 | 已定（2026-09-14，所有权 / 清理 2026-09-15 补定） | 运行时 Signal（细粒度绑定），不做 vdom diff，不走编译期静态依赖；作用域只开在结构边界，同步渲染期外创建 effect 抛错 |
-| [ADR-002](./adr-002-bridge-communication.md) | JS 与 Kotlin 通信机制（含序列化） | 已定（2026-09-15） | 双向入口 5 + 5；JS 专用线程、K 入口不等待；一次 K 入口一个事务；每页一个引擎；错误六类一个 sink；JSON 文本载荷 |
+| [ADR-002](./adr-002-bridge-communication.md) | JS 与 Kotlin 通信机制（含序列化） | 已定（2026-09-15） | 双向入口 5 + 5；JS 专用线程、K 入口不等待；一次 K 入口一个事务；每页一个引擎；错误七类一个 sink；JSON 文本载荷 |
 | [ADR-003](./adr-003-kotlin-node-tree-and-registry.md) | Kotlin 侧节点表与组件注册 | 已定（2026-09-15） | 节点即重组单元；JS 线程直接写快照状态、主线程只重组；App 级注册表 + 清单下发；prop / event schema 写入时转换 |
 | [ADR-004](./adr-004-events-and-input-ownership.md) | 事件与输入状态归属 | 已定（2026-09-15） | 事件三分（离散 / 流式输入 / 连续），60 fps 状态留 Kotlin；新增 `x` 命令 op（ref + cmd）；文本框 initial prop + 命令 + 事件，不受控回写 |
 | [ADR-005](./adr-005-engine.md) | JS 引擎选型 | 已定（2026-09-15） | MicroQuickJS → QuickJS（ES2025，经 quickjs-kmp）；原生 ESM 必选；不降级 ES5；热下发不在本期 |
@@ -99,7 +99,7 @@ tinyui/
 
 | 文件 | 主题 | 状态 |
 |---|---|---|
-| [build-chain.md](./build-chain.md) | 构建链：TSX → ESM 模块字节码，esbuild 选型，字节码由 CLI 经 `qjsc-kmp` 生成 | 已完成（2026-09-16） |
+| [build-chain.md](./build-chain.md) | 构建链：TSX → ESM 模块字节码，esbuild 选型，字节码由 CLI 经 `qjsc-kmp` 生成；§7 错误上报与 source map 回映射 | 已完成（2026-09-16；§7 2026-09-17） |
 | [app-model.md](./app-model.md) | 应用模型：路由、生命周期、跨页状态在 Kotlin；页面之间经 Kotlin 中转的四种通信 | 已对齐（2026-09-16），API 面归 C 组 |
 | [js-runtime.html](./js-runtime.html) | **JS 层总览**：七样运行时对象、四个时期、响应式闭环、一个页面的一生、规则表。先读这份（浏览器打开） | 已定（2026-09-16） |
 | [runtime-api.md](./runtime-api.md) | `@tiny-ui/core` v1 的 API 定义、页面模块契约、桥入口 | 已定（2026-09-16） |

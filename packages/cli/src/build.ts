@@ -1,6 +1,7 @@
 import { build as esbuild, type Plugin } from "esbuild";
+import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { compileModule, findQjsc } from "./qjsc.ts";
 import { TransformError, transformJsx } from "./transform.ts";
 
@@ -22,6 +23,8 @@ export interface BuiltModule {
     name: string;
     js: string;
     map: string;
+    /** First 8 hex digits of the sha256 of the ESM output: pairs a stack trace with its source map (docs/build-chain.md). */
+    buildId: string;
     bin?: string;
 }
 
@@ -34,6 +37,7 @@ export interface BuildResult {
 export interface Manifest {
     runtime: string[];
     pages: string[];
+    buildIds: Record<string, string>;
 }
 
 export async function build(options: BuildOptions): Promise<BuildResult> {
@@ -53,6 +57,10 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     await rm(join(out, "runtime"), { recursive: true, force: true });
     const runtime = await bundleRuntime(root, out);
     const pages = await bundlePages(root, out, pageNames);
+    for (const m of [...runtime, ...pages]) {
+        m.buildId = createHash("sha256").update(await readFile(m.js)).digest("hex").slice(0, 8);
+        await rootRelativeSources(root, m.map);
+    }
     if (qjsc) {
         for (const m of [...runtime, ...pages]) {
             m.bin = m.js.replace(/\.js$/, ".bin");
@@ -61,7 +69,11 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     }
 
     const manifest = join(out, "manifest.json");
-    const content: Manifest = { runtime: runtime.map((m) => m.name), pages: pages.map((m) => m.name) };
+    const content: Manifest = {
+        runtime: runtime.map((m) => m.name),
+        pages: pages.map((m) => m.name),
+        buildIds: Object.fromEntries([...runtime, ...pages].map((m) => [m.name, m.buildId])),
+    };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
     return { runtime, pages, manifest };
 }
@@ -96,7 +108,7 @@ async function bundleRuntime(root: string, out: string): Promise<BuiltModule[]> 
             outfile,
             external: RUNTIME_MODULES.filter((m) => m !== name),
         });
-        built.push({ name, js: outfile, map: outfile + ".map" });
+        built.push({ name, js: outfile, map: outfile + ".map", buildId: "" });
     }
     return built;
 }
@@ -118,8 +130,19 @@ async function bundlePages(root: string, out: string, pages: Map<string, string>
     });
     return [...pages.keys()].map((name) => {
         const js = join(outdir, name.slice("pages/".length) + ".js");
-        return { name, js, map: js + ".map" };
+        return { name, js, map: js + ".map", buildId: "" };
     });
+}
+
+/** esbuild writes `sources` relative to the map; the runtime and offline symbolication want paths from the project root. */
+async function rootRelativeSources(root: string, mapFile: string): Promise<void> {
+    const map = JSON.parse(await readFile(mapFile, "utf8")) as { sources: string[] };
+    map.sources = map.sources.map((s) => {
+        // a bare scheme (`tinyui:jsx-shim`) stays; an absolute path (`/x` or `C:\x`) or a map-relative one becomes root-relative
+        if (!isAbsolute(s) && /^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+        return relative(root, resolve(dirname(mapFile), s)).split(sep).join("/");
+    });
+    await writeFile(mapFile, JSON.stringify(map));
 }
 
 const JSX_SHIM = "tinyui:jsx-shim";
@@ -140,7 +163,8 @@ const pagePlugin: Plugin = {
         api.onLoad({ filter: TSX }, async (args) => {
             const source = await readFile(args.path, "utf8");
             try {
-                const { code, map } = transformJsx(relative(api.initialOptions.absWorkingDir ?? "", args.path), source);
+                // the map's `source` is resolved against the file's directory, so it has to be the absolute path
+                const { code, map } = transformJsx(args.path, source);
                 const inline = Buffer.from(map).toString("base64");
                 return { contents: `${code}\n//# sourceMappingURL=data:application/json;base64,${inline}`, loader: "tsx" };
             } catch (e) {
