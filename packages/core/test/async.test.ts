@@ -2,16 +2,17 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { drain, mount, tinyui, transaction, unmount } from "./helpers.ts";
-import { call, Column, createResource, h, HostError, onEmit, pageVisible, query, signal, Text, thunk } from "../src/index.ts";
+import { Column, h, HostError, internal, pageVisible, resource, signal, Text, thunk } from "../src/index.ts"
+const { call, query, onEmit } = internal;;
 import * as timers from "../src/timers.ts";
 
 const g = globalThis as Record<string, unknown>;
 afterEach(() => unmount());
 
-describe("createResource + K3", () => {
+describe("resource + K3", () => {
     it("fires the host call at creation and writes signals when resolved", async () => {
         mount(() => {
-            const [user, { loading }] = createResource(() => call<{ name: string }>("http.get", { url: "/me" }));
+            const [user, { loading }] = resource(() => call<{ name: string }>("http.get", { url: "/me" }));
             return h(Column, null, h(Text, { text: thunk(() => loading() ? "loading" : user()!.name) }));
         });
         assert.deepEqual(bridge.calls.map((c) => [c.name, c.args]), [["http.get", { url: "/me" }]]);
@@ -26,7 +27,7 @@ describe("createResource + K3", () => {
 
     it("rejection lands in error() and is not reported", async () => {
         mount(() => {
-            const [, { error }] = createResource(() => call("http.get"));
+            const [, { error }] = resource(() => call("http.get"));
             return h(Column, null, h(Text, { text: thunk(() => { const e = error(); return e instanceof HostError ? e.code : "ok"; }) }));
         });
         tinyui().reject(bridge.calls.at(-1)!.cbId, JSON.stringify({ code: "E_NET", message: "offline" }));
@@ -40,7 +41,7 @@ describe("createResource + K3", () => {
 
     it("a non-JSON host result rejects instead of hanging", async () => {
         mount(() => {
-            const [, { error, loading }] = createResource(() => call("x"));
+            const [, { error, loading }] = resource(() => call("x"));
             return h(Column, null, h(Text, { text: thunk(() => loading() ? "loading" : String((error() as HostError).code)) }));
         });
         tinyui().resolve(bridge.calls.at(-1)!.cbId, "{not json");
@@ -52,7 +53,7 @@ describe("createResource + K3", () => {
 
     it("a result arriving after unmount is dropped", async () => {
         mount(() => {
-            const [v] = createResource(() => call("x"));
+            const [v] = resource(() => call("x"));
             return h(Column, null, h(Text, { text: thunk(() => String(v())) }));
         });
         const cbId = bridge.calls.at(-1)!.cbId;

@@ -1,4 +1,4 @@
-// createStore: docs/runtime-api.md §2.6. Property-level subscriptions over lazily created proxies.
+// observable: docs/runtime-api.md §2.6. Property-level subscriptions over lazily created proxies.
 import { notify, track, tracking, type Effect } from "./reactive.ts";
 
 const RAW: unique symbol = Symbol("tinyui.raw");
@@ -16,9 +16,9 @@ const subscribers = new WeakMap<object, Map<Key, Subs>>();
  * through the proxy notify. Nested plain objects and arrays are wrapped on first read; anything
  * else (class instances, Map / Set, Date) is stored by value and only a reference swap triggers.
  */
-export function createStore<T extends object>(init: T): T {
+export function observable<T extends object>(init: T): T {
     const raw = unwrapShallow(init);
-    if (!isWrappable(raw)) throw new Error("createStore() takes a plain object or an array");
+    if (!isWrappable(raw)) throw new Error("observable() takes a plain object or an array");
     return wrap(raw) as T;
 }
 

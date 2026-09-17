@@ -1,5 +1,5 @@
 // docs/native-api.md §5: J3 `http.request`, errors are HostError with the E3 codes.
-import { call } from "@tiny-ui/core";
+import { internal } from "@tiny-ui/core";
 
 export interface HttpOptions {
     headers?: Record<string, string>;
@@ -14,7 +14,7 @@ export interface HttpResponse<T = unknown> {
 }
 
 export function request<T = unknown>(method: string, url: string, body?: unknown, options: HttpOptions = {}): Promise<HttpResponse<T>> {
-    return call<HttpResponse<T>>("http.request", { method, url, ...(body !== undefined && { body }), ...options });
+    return internal.call<HttpResponse<T>>("http.request", { method, url, ...(body !== undefined && { body }), ...options });
 }
 
 export const get = <T = unknown>(url: string, options?: HttpOptions) => request<T>("GET", url, undefined, options);

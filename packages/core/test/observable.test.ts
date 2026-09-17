@@ -3,14 +3,14 @@ import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { mount, transaction, unmount } from "./helpers.ts";
 import { createOwner, effect, runPending, runWithOwner } from "../src/reactive.ts";
-import { createStore, unwrap } from "../src/store.ts";
+import { observable, unwrap } from "../src/observable.ts";
 import { Column, For, h, Text, thunk } from "../src/index.ts";
 
 const render = <T>(fn: () => T) => runWithOwner(createOwner(), fn);
 
-describe("createStore", () => {
+describe("observable", () => {
     it("subscribes per property: writing one field re-runs only its readers", () => {
-        const store = createStore({ a: 1, b: 1 });
+        const store = observable({ a: 1, b: 1 });
         let aRuns = 0, bRuns = 0;
         render(() => {
             effect(() => { store.a; aRuns++; });
@@ -25,7 +25,7 @@ describe("createStore", () => {
     });
 
     it("wraps nested objects lazily with a stable identity", () => {
-        const store = createStore({ user: { name: "a", tags: ["x"] } });
+        const store = observable({ user: { name: "a", tags: ["x"] } });
         assert.equal(store.user, store.user);
         assert.equal(store.user.tags, store.user.tags);
         let runs = 0;
@@ -42,7 +42,7 @@ describe("createStore", () => {
     });
 
     it("tracks array elements and length; push, splice and truncation notify", () => {
-        const store = createStore({ list: [1, 2, 3] });
+        const store = observable({ list: [1, 2, 3] });
         const seen: number[][] = [];
         render(() => effect(() => seen.push(store.list.map((n) => n * 10))));
         store.list.push(4);
@@ -57,7 +57,7 @@ describe("createStore", () => {
     });
 
     it("tracks the key set for iteration and `in`", () => {
-        const store = createStore<Record<string, number>>({});
+        const store = observable<Record<string, number>>({});
         const keys: string[][] = [];
         let has = 0;
         render(() => {
@@ -74,7 +74,7 @@ describe("createStore", () => {
 
     it("stores class instances and Map by value: only a reference swap triggers", () => {
         class Point { x: number; constructor(x = 0) { this.x = x; } }
-        const store = createStore({ p: new Point(), m: new Map<string, number>() });
+        const store = observable({ p: new Point(), m: new Map<string, number>() });
         let runs = 0;
         render(() => effect(() => { store.p.x; store.m.size; runs++; }));
         store.p.x = 5;
@@ -90,9 +90,9 @@ describe("createStore", () => {
         const inner = { n: 1 };
         const raw: { locked: { n: number }; open?: { n: number } } = { locked: inner };
         Object.defineProperty(raw, "locked", { value: inner, writable: false, configurable: false, enumerable: true });
-        const store = createStore(raw);
+        const store = observable(raw);
         assert.equal(store.locked, inner, "a non-configurable, non-writable property comes back unwrapped");
-        const sealed = createStore(Object.seal({ a: 1 }) as { a: number; b?: number });
+        const sealed = observable(Object.seal({ a: 1 }) as { a: number; b?: number });
         let runs = 0;
         render(() => effect(() => { sealed.b; runs++; }));
         assert.throws(() => { sealed.b = 2; }, TypeError);
@@ -103,7 +103,7 @@ describe("createStore", () => {
 
     it("notifies by what a setter actually stored", () => {
         let backing = 1;
-        const store = createStore({ get v() { return backing; }, set v(n: number) { backing = n * 2; } });
+        const store = observable({ get v() { return backing; }, set v(n: number) { backing = n * 2; } });
         const seen: number[] = [];
         render(() => effect(() => seen.push(store.v)));
         store.v = 1;
@@ -112,24 +112,24 @@ describe("createStore", () => {
     });
 
     it("unwrap returns plain data and rejects non-objects at creation", () => {
-        const store = createStore({ user: { name: "a" }, list: [{ id: 1 }] });
+        const store = observable({ user: { name: "a" }, list: [{ id: 1 }] });
         const copy = { ...store, extra: store.user };
         assert.equal(unwrap(store), unwrap(store));
         const raw = unwrap(copy);
         assert.equal(JSON.stringify(raw), JSON.stringify({ user: { name: "a" }, list: [{ id: 1 }], extra: { name: "a" } }));
         assert.notEqual(raw.extra, store.user, "nested proxies are replaced");
-        assert.equal(createStore(store), store, "a store is returned as is");
-        assert.throws(() => createStore(1 as unknown as object), /plain object or an array/);
-        assert.throws(() => createStore(new Date() as unknown as object), /plain object or an array/);
+        assert.equal(observable(store), store, "a store is returned as is");
+        assert.throws(() => observable(1 as unknown as object), /plain object or an array/);
+        assert.throws(() => observable(new Date() as unknown as object), /plain object or an array/);
     });
 });
 
-describe("createStore with For", () => {
+describe("observable with For", () => {
     afterEach(() => unmount());
 
     it("a field write updates one binding without reconciling the list", () => {
         interface Todo { id: number; title: string; done: boolean }
-        const store = createStore({ todos: [{ id: 1, title: "a", done: false }, { id: 2, title: "b", done: false }] as Todo[] });
+        const store = observable({ todos: [{ id: 1, title: "a", done: false }, { id: 2, title: "b", done: false }] as Todo[] });
         let reconciles = 0;
         mount(() => h(Column, null,
             h(For, { each: thunk(() => { reconciles++; return store.todos; }), key: (t: Todo) => t.id }, (item: () => Todo) =>

@@ -28,7 +28,7 @@
 
 | 项 | 来源 | 状态 |
 |---|---|---|
-| JS 运行时 API：`signal` / `memo` / `effect` / `onCleanup` / `For` / `Show` / `ref` + `cmd` / **`createResource`**；"组件函数必须同步"规则；J3 / K3 用原生 Promise | ADR-001 / 004 / 005 | 已定（2026-09-16，[js-runtime.html](./js-runtime.html) + [runtime-api.md](./runtime-api.md)） |
+| JS 运行时 API：`signal` / `memo` / `effect` / `onCleanup` / `For` / `Show` / `ref` + `cmd` / **`resource`**（原拟名 `createResource`）；"组件函数必须同步"规则；J3 / K3 用原生 Promise | ADR-001 / 004 / 005 | 已定（2026-09-16，[js-runtime.html](./js-runtime.html) + [runtime-api.md](./runtime-api.md)） |
 | CLI 的 JSX 变换：自动 thunk（Solid 式 getter 包裹）、source map 输出 | ADR-005 | 已定（2026-09-16，[jsx-transform.md](./jsx-transform.md)） |
 | patch 协议：六种 op、JSON 形态、是否带协议版本号 | ADR-001 / 002 / 004 | 已定（2026-09-16，[patch-protocol.md](./patch-protocol.md)） |
 | schema DSL 形态 + 由 schema 生成 TS 类型定义的工具链 | ADR-003 | 已定（[components.md](./components.md) §1，`tinyui schema`） |
@@ -43,7 +43,7 @@
 
 | 项 | 来源 | 触发条件 |
 |---|---|---|
-| ~~`createStore`（Solid 式 Proxy 深层响应式）~~ | ADR-005 | 已完成（2026-09-17，[runtime-api.md](./runtime-api.md) §2.6）：直接赋值、属性级订阅、只深代理纯对象与数组；`reconcile` / `produce` 不做，触发条件"服务端全量刷新导致整表重绑成为性能问题" |
+| ~~`createStore`（Solid 式 Proxy 深层响应式）~~ | ADR-005 | 已完成（2026-09-17，定名 `observable`，[runtime-api.md](./runtime-api.md) §2.6）：直接赋值、属性级订阅、只深代理纯对象与数组；`reconcile` / `produce` 不做，触发条件"服务端全量刷新导致整表重绑成为性能问题" |
 | 热下发（页面包分发与版本兼容；引擎侧 Kotlin 回调式 module loader 已在 quickjs-kmp 完成，`JsEngineConfig.moduleLoader`） | ADR-005 | 内核稳定后另立 ADR |
 | `qjsc-kmp` 宿主二进制随 quickjs-kmp tag 发 GitHub Release，CLI 按版本下载 | build-chain.md §5 | CI 现编耗时或业务方接入成为问题；属 quickjs-kmp 仓改动 |
 | App 级共享模块（业务共享代码进 external 列表与模块表） | build-chain.md §3 | 页面间重复代码让安装包体积成问题 |

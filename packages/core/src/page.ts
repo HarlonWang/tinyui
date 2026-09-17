@@ -12,7 +12,7 @@ export interface HostManifest {
 }
 
 let root: Owner | null = null;
-let manifest: HostManifest = { components: {}, capabilities: [] };
+let current: HostManifest = { components: {}, capabilities: [] };
 const [visible, setVisible] = signal(true);
 const topics = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -20,8 +20,8 @@ export function pageVisible(): boolean {
     return visible();
 }
 
-export function host(): HostManifest {
-    return manifest;
+export function manifest(): HostManifest {
+    return current;
 }
 
 /** K5 subscription; the subscription dies with the current owner. */
@@ -47,7 +47,7 @@ export const entries = {
 
     mount(page: (props: Props) => Node, propsJson: string, hostJson: string): void {
         if (root) throw new Error("mount() called twice");
-        manifest = JSON.parse(hostJson) as HostManifest;
+        current = JSON.parse(hostJson) as HostManifest;
         const props = JSON.parse(propsJson) as Props;
         resetIds();
         root = createOwner();
