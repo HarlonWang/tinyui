@@ -1,6 +1,6 @@
 # JS 运行时 API：`@tiny-ui/core` v1
 
-- 状态：已定（2026-09-16）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
+- 状态：已定（2026-09-16；2026-09-17 加 §2.6 `createStore`）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
 - 来源：ADR-001（Signal、所有权）、ADR-002（桥入口、事务、错误）、ADR-004（ref + cmd、事件 payload）、ADR-005（组件函数必须同步、`createResource`、原生 Promise）
 - 范围：业务可见的 API、它们的精确语义、页面模块契约、以及运行时与 Kotlin 之间的桥入口（内部契约）。JSX 写法如何变成对这些 API 的调用见 [jsx-transform.md](./jsx-transform.md)；产出的 patch 形态见 [patch-protocol.md](./patch-protocol.md)
 
@@ -13,6 +13,8 @@
 | | `effect(fn)` | 副作用，依赖变化后在 flush 时重跑 |
 | | `onCleanup(fn)` | 登记清理，随最近的 effect 或结构作用域执行 |
 | | `untrack(fn)` | 读取但不订阅 |
+| | `createStore(init)` → 代理对象 | 对象 / 数组的属性级响应式，直接赋值 |
+| | `unwrap(store)` | 取回代理背后的原始数据 |
 | 节点 | `h(type, props, ...children)` → `Node` | 建节点 / 调组件，JSX 的目标 |
 | | `Fragment` | 多个兄弟节点 |
 | | `thunk(fn)` | 编译器包动态 prop 用；业务一般不手写 |
@@ -24,7 +26,7 @@
 | 页面 | `pageVisible()` | 页面是否可见（K1 `visible`） |
 | 版本 | `VERSION`、`PROTOCOL` | 包版本；patch 协议版本号 |
 
-不在 v1：`createStore`（v1.1）、`createContext`、`ErrorBoundary`、`Suspense`、`Switch/Match`、`Index`、`Portal`、`lazy`、`setInterval`。页内跨组件共享状态直接用模块顶层的 `signal`（每页一个引擎，模块作用域就是页面作用域）。
+不在 v1：`createContext`、`ErrorBoundary`、`Suspense`、`Switch/Match`、`Index`、`Portal`、`lazy`、`setInterval`。页内跨组件共享状态直接用模块顶层的 `signal`（每页一个引擎，模块作用域就是页面作用域）。
 
 ## 2. 响应式原语
 
@@ -78,6 +80,23 @@ function untrack<T>(fn: () => T): T
 ```
 
 执行 `fn` 期间不建立任何订阅。用于 effect 里"读一下但不想因它重跑"。
+
+### 2.6 `createStore`
+
+```ts
+function createStore<T extends object>(init: T): T
+function unwrap<T>(value: T): T
+```
+
+- `init` 必须是纯对象或数组，返回它的 Proxy；传入已是 store 的对象原样返回。可在任何地方创建，不要求渲染期
+- **读即订阅，按属性**：effect 里读 `store.user.name` 只订阅 `user` 对象上的 `name`；`Object.keys` / `for…in` / `in` / `JSON.stringify` 订阅键集合
+- **写即通知，直接赋值**：`store.user.name = "x"`、`store.list.push(x)`、`splice` / `sort` / `length = 0` / `delete` 都触发；`===` 同值写入不触发。写入时机与 `signal` 相同，在 flush 统一重跑，受同一个更新环检测
+- 嵌套的纯对象 / 数组在第一次读到时才被代理，代理按原对象缓存：`store.list[0] === store.list[0]`。class 实例、`Map` / `Set` / `Date` 按值存放，不深追踪，只有替换引用才触发；冻结对象同样按值
+- 存进 store 的对象被直接持有（不拷贝）：绕过 Proxy 改原对象不会触发
+- 与 `For` 的配合：`each={store.list}` 时行 accessor `item()` 返回缓存的代理，行内绑定落到属性级——改一行的一个字段只重跑读了它的绑定，`For` 不重算；`push` / `splice` 触发一次 reconcile
+- `unwrap(value)`：返回代理背后的原对象，并把嵌套的代理原地换回原对象；发请求体、打日志时用。非代理原样返回
+- 与 `@tiny-ui/native` 的 `store`（跨页 KV，native-api.md §3）无关：那是宿主存储，这是页内响应式状态
+- 分工：原始值用 `signal`；有独立变化字段的对象 / 数组用 `createStore`；`signal<T[]>` 整体替换仍合法。不做 `reconcile` / `produce` / 只读视图（roadmap D 组）
 
 ## 3. 节点与组件
 

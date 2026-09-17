@@ -6,7 +6,7 @@ export interface Owner {
     disposed: boolean;
 }
 
-interface Effect {
+export interface Effect {
     fn: () => void;
     deps: Set<Effect>[];
     owner: Owner | null;
@@ -59,6 +59,11 @@ export function disposeOwner(owner: Owner): void {
 
 export function insideRender(): boolean {
     return currentOwner !== null;
+}
+
+/** True while an effect is collecting dependencies; stores use it to skip allocating subscriber sets. */
+export function tracking(): boolean {
+    return currentEffect !== null;
 }
 
 export function signal<T>(init: T): [get: () => T, set: (next: T | ((prev: T) => T)) => void] {
@@ -167,14 +172,14 @@ function runCleanups(e: Effect): void {
     for (const c of cleanups) c();
 }
 
-function track(subs: Set<Effect>): void {
+export function track(subs: Set<Effect>): void {
     const e = currentEffect;
     if (!e || subs.has(e)) return;
     subs.add(e);
     e.deps.push(subs);
 }
 
-function notify(subs: Set<Effect>): void {
+export function notify(subs: Set<Effect>): void {
     for (const e of subs) {
         if (e.memo) {
             if (!e.memo.dirty) {

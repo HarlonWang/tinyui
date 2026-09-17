@@ -384,7 +384,7 @@ function TodoRow(props) {
 <tr><td>children 创建后不可变；结构变化只经 <code>For</code> / <code>Show</code></td><td>编译期报错</td><td>§1：只有 <code>For</code> / <code>Show</code> 开 owner，别处建的节点没人负责删</td></tr>
 <tr><td><code>For</code> / <code>Show</code> 只能直接写在内置节点的 children 里</td><td><code>h()</code> 抛 E2</td><td>§1：槽位表挂在内置节点上，它们需要一个父节点来算 index</td></tr>
 <tr><td>内置 / 宿主节点的 prop 不能是函数（<code>on*</code> 除外）；业务组件的 prop 不限</td><td><code>h()</code> / <code>bindProp</code> 抛 E2，抓的是 <code>text={fmt}</code> 忘了调用</td><td>ADR-002：函数不过桥，边界就是 patch；业务组件之间是纯 JS 调用</td></tr>
-<tr><td>数组 / 对象整体替换才触发</td><td><code>list().push(x)</code> 静默无效</td><td>§3：<code>===</code> 判等；v1 没有 Proxy 追踪</td></tr>
+<tr><td><code>signal</code> 里的数组 / 对象整体替换才触发；要按字段触发用 <code>createStore</code></td><td><code>list().push(x)</code> 静默无效</td><td>§3：<code>===</code> 判等；Proxy 追踪只在 store 里（runtime-api.md §2.6）</td></tr>
 <tr><td><code>For</code> 的 item 是 accessor</td><td>写 <code>todo.title</code> 类型错</td><td>§4.4：同 key 元素换引用时更新行而不重建行</td></tr>
 <tr><td><code>Show</code> 只在真值性变化时切分支</td><td></td><td>§4.2：切分支 = 重建整棵分支，值变化不该付这个代价</td></tr>
 <tr><td>同一 flush 内一个 effect 重跑超过 100 次</td><td>抛 E2</td><td>§3：effect 写自己读的 signal 会成环</td></tr>

@@ -2,6 +2,7 @@ export const VERSION = "0.0.0";
 export { PROTOCOL, pageVisible, host, onEmit } from "./page.ts";
 export type { HostManifest } from "./page.ts";
 export { signal, memo, effect, onCleanup, untrack } from "./reactive.ts";
+export { createStore, unwrap } from "./store.ts";
 export { h, Fragment, thunk, ref } from "./node.ts";
 export type { Node, Ref, Component } from "./node.ts";
 export { For, Show } from "./control.ts";
