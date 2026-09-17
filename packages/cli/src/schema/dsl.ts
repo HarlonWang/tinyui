@@ -48,6 +48,7 @@ export const number = (o: PropOptions & { default?: number } = {}) => prop("numb
 export const boolean = (o: PropOptions & { default?: boolean } = {}) => prop("boolean", o);
 export const dp = (o: PropOptions & { default?: number } = {}) => prop("dp", o);
 export const sp = (o: PropOptions & { default?: number } = {}) => prop("sp", o);
+/** `#RRGGBB` / `#AARRGGBB`, or a theme token name (tokens.ts). */
 export const color = (o: PropOptions & { default?: string } = {}) => prop("color", o);
 /** A number in dp, or "fill" / "wrap". */
 export const size = (o: PropOptions & { default?: number | "fill" | "wrap" } = {}) => prop("size", o);

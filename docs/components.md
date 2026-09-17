@@ -30,7 +30,7 @@ defineComponent("TextField", {
 });
 ```
 
-prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB` / `#AARRGGBB`）/ `enumOf([...])` / `size`（数字 dp，或 `"fill"` / `"wrap"`）。选项：`required`、`default`、`initial`（只认创建时的值，之后的写入按 E5 跳过并上报）、`doc`。事件 payload 与命令参数的字段只有 `field.string / number / boolean`，扁平。
+prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB` / `#AARRGGBB`，或 §6 的主题 token 名）/ `enumOf([...])` / `size`（数字 dp，或 `"fill"` / `"wrap"`）。选项：`required`、`default`、`initial`（只认创建时的值，之后的写入按 E5 跳过并上报）、`doc`。事件 payload 与命令参数的字段只有 `field.string / number / boolean`，扁平。
 
 ## 2. 公共布局 prop 与 Modifier 顺序
 
@@ -56,7 +56,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 |---|---|---|---|---|
 | `Column` / `Row` | `gap`、`align`（交叉轴 start / center / end）、`justify`（主轴 start / center / end / spaceBetween） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
-| `Text` | `text`（必填）、`color`、`fontSize`、`fontWeight`（normal / medium / bold）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick` | | |
+| `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick` | | |
 | `Button` | `text`（必填）、`enabled`、`variant`（filled / outlined / text） | `onClick` | | |
 | `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard` | `onChange{text}`、`onCommit{text}`（IME Done 或失焦） | `setText{text}`、`focus`、`blur` | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
@@ -73,3 +73,12 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 ## 5. `Placeholder`
 
 未注册的类型渲染 `Placeholder`，同时 E5 上报。debug 构建（Android `FLAG_DEBUGGABLE`、iOS debug binary）画红框加类型名与 id；release 渲染零尺寸的空 `Box`。
+
+## 6. 主题 token
+
+定于 2026-09-17。**主题色与文字样式只能以 token 名过桥，Kotlin 在组合期从 `MaterialTheme` 解析；JS 永远拿不到主题的具体值。** 深浅切换、宿主换主题色时页面不发任何 patch 就跟着变——主题是宿主的运行时状态，不是页面的数据（与 ADR-004"高频状态留 Kotlin"同一原理）。需要派生色（如 primary 变浅）时由宿主注册成新 token，不在页面里算。
+
+- `color` 类型的 prop 同时接受字面量（`#RRGGBB` / `#AARRGGBB`）与 token 名；生成器出联合类型（`` `#${string}` | ColorToken ``），拼错的 token 编译期报，Kotlin 侧按首字符 `#` 分流。字面量留给品牌色、图表色这类本来就不属于主题的颜色
+- token 词表就是 Material 3 的字段名：颜色为 `ColorScheme` 的全部字段，文字样式为 `Typography` 的十五个名字（cli `schema/tokens.ts` 是词表真值，`compose/.../schema/Theme.kt` 逐一解析，测试保证两边一致）
+- 暂不做：宿主自定义 token（触发条件：某宿主出现 M3 之外的语义色要跨页复用，届时走清单下发 + 宿主类型包生成，与宿主组件同一条路）；间距 / 圆角 / 阴影的 token
+
