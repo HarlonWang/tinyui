@@ -53,18 +53,21 @@ class BundleSmokeTest {
         val page = PageModule("pages/todos", out.resolve("pages/todos.bin").readBytes(), manifest.buildId("pages/todos"))
         val host = PageHost(runtime, page, ComponentRegistry().registerBuiltins(), sink, HostServices(http = http), sourceMaps = maps)
         host.start()
-        // the list only exists once the first page has loaded; node ids are dense, so scan them
-        fun lazyColumn(): Int? = (1..host.tree.size * 2).firstOrNull { host.tree.node(it)?.type == "LazyColumn" }
-        withContext(Dispatchers.Default) { withTimeout(10_000) {
-            while (lazyColumn() == null) delay(20)
-            host.dispatch(lazyColumn()!!, "onReachEnd", "{}")
-            while (errors.none { it.kind == "E7" }) delay(20)
-        } }
-        val e = errors.single { it.kind == "E7" }
-        assertEquals(manifest.buildId("pages/todos"), e.buildId)
-        val own = e.frames.firstOrNull { it.mapped && it.file == "src/pages/todos.tsx" } ?: error("no mapped frame in ${e.frames}; stack=${e.jsStack}")
-        val source = File("../sample/js/src/pages/todos.tsx").readLines()
-        assertTrue("await http.get" in source[own.line - 1], "frame $own points at the await; stack=${e.jsStack}")
-        host.close()
+        try {
+            // the list only exists once the first page has loaded; node ids are dense, so scan them
+            fun lazyColumn(): Int? = (1..host.tree.size * 2).firstOrNull { host.tree.node(it)?.type == "LazyColumn" }
+            withContext(Dispatchers.Default) { withTimeout(10_000) {
+                while (lazyColumn() == null) delay(20)
+                host.dispatch(lazyColumn()!!, "onReachEnd", "{}")
+                while (errors.none { it.kind == "E7" }) delay(20)
+            } }
+            val e = errors.single { it.kind == "E7" }
+            assertEquals(manifest.buildId("pages/todos"), e.buildId)
+            val own = e.frames.firstOrNull { it.mapped && it.file == "src/pages/todos.tsx" } ?: error("no mapped frame in ${e.frames}; stack=${e.jsStack}")
+            val source = File("../sample/js/src/pages/todos.tsx").readLines()
+            assertTrue("await http.get" in source[own.line - 1], "frame $own points at the await; stack=${e.jsStack}")
+        } finally {
+            host.close()
+        }
     }
 }

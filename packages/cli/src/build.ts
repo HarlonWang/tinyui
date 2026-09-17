@@ -1,7 +1,7 @@
 import { build as esbuild, type Plugin } from "esbuild";
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { compileModule, findQjsc } from "./qjsc.ts";
 import { TransformError, transformJsx } from "./transform.ts";
 
@@ -137,7 +137,11 @@ async function bundlePages(root: string, out: string, pages: Map<string, string>
 /** esbuild writes `sources` relative to the map; the runtime and offline symbolication want paths from the project root. */
 async function rootRelativeSources(root: string, mapFile: string): Promise<void> {
     const map = JSON.parse(await readFile(mapFile, "utf8")) as { sources: string[] };
-    map.sources = map.sources.map((s) => (s.includes(":") ? s : relative(root, resolve(dirname(mapFile), s)).split(sep).join("/")));
+    map.sources = map.sources.map((s) => {
+        // a bare scheme (`tinyui:jsx-shim`) stays; an absolute path (`/x` or `C:\x`) or a map-relative one becomes root-relative
+        if (!isAbsolute(s) && /^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+        return relative(root, resolve(dirname(mapFile), s)).split(sep).join("/");
+    });
     await writeFile(mapFile, JSON.stringify(map));
 }
 

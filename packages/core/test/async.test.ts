@@ -37,7 +37,8 @@ describe("resource + K3", () => {
         tinyui().flush();
         assert.deepEqual(bridge.applied.slice(before).flat(), [["p", 1, "text", "E_NET"]]);
         assert.equal(bridge.reports.length, 0);
-        assert.match(seen!.stack ?? "", /async\.test/, "the stack is where call() happened, not where reject() arrived");
+        assert.match(seen!.stack ?? "", /at resource /, "the stack is where call() happened (inside resource's fetcher)");
+        assert.doesNotMatch(seen!.stack ?? "", /rejectPending/, "not where reject() arrived");
         unmount();
     });
 

@@ -27,8 +27,8 @@ class SourceMaps(maps: Map<String, String>) {
         val file = loc.groupValues[1]
         val lineNo = loc.groupValues[2].toInt()
         val column = loc.groups[3]?.value?.toInt()
-        val map = entries[file.removePrefix("${PageHost.MODULE_SCHEME}:")]?.value
-        val mapped = map?.lookup(lineNo, column)
+        // a broken map must not cost the report itself: fall back to the engine's frame
+        val mapped = runCatching { entries[file.removePrefix("${PageHost.MODULE_SCHEME}:")]?.value?.lookup(lineNo, column) }.getOrNull()
         return if (mapped != null) StackFrame(function, mapped.file, mapped.line, mapped.column, mapped = true)
         else StackFrame(function, file, lineNo, column, mapped = false)
     }
