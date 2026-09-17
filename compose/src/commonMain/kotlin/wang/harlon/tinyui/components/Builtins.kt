@@ -18,6 +18,7 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -93,13 +94,21 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Button) { scope ->
         val onClick = { if (scope.has("onClick")) scope.dispatch("onClick") }
         val enabled = scope.get<Boolean>("enabled") ?: true
-        val label: @Composable () -> Unit = { Text(scope["text"] ?: "") }
+        val label: @Composable () -> Unit = { if (scope.node.children.isEmpty()) Text(scope["text"] ?: "") else scope.Children() }
         val modifier = scope.modifier(clickable = false) // the button owns the click and its enabled state
         when (scope.get<String>("variant")) {
             "outlined" -> OutlinedButton(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
             "text" -> TextButton(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
             else -> Button(onClick = onClick, enabled = enabled, modifier = modifier, content = { label() })
         }
+    }
+    register(BuiltinSchemas.RadioButton) { scope ->
+        RadioButton(
+            selected = scope.get<Boolean>("selected") == true,
+            onClick = if (scope.has("onClick")) ({ scope.dispatch("onClick") }) else null,
+            enabled = scope.get<Boolean>("enabled") ?: true,
+            modifier = scope.modifier(clickable = false),
+        )
     }
     register(BuiltinSchemas.TextField) { scope -> TextFieldComponent(scope) }
     register(BuiltinSchemas.LazyColumn) { scope -> LazyColumnComponent(scope) }

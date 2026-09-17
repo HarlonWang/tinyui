@@ -79,11 +79,23 @@ export interface TextProps extends LayoutProps {
 export interface ButtonClickPayload {
 }
 
+/** Label is `text`, or the children when given (an indicator, an icon and a label…); children win. */
 export interface ButtonProps extends LayoutProps {
-    text: string;
+    text?: string;
     enabled?: boolean;
     variant?: "filled" | "outlined" | "text";
     onClick?: (e: ButtonClickPayload) => void;
+    children?: Node | Node[];
+}
+
+export interface RadioButtonClickPayload {
+}
+
+/** Selection lives in JS: `onClick` reports the tap, `selected` is a plain prop. */
+export interface RadioButtonProps extends LayoutProps {
+    selected: boolean;
+    enabled?: boolean;
+    onClick?: (e: RadioButtonClickPayload) => void;
 }
 
 export interface TextFieldChangePayload {
@@ -157,6 +169,7 @@ export interface IntrinsicElements {
     Box: BoxProps;
     Text: TextProps;
     Button: ButtonProps;
+    RadioButton: RadioButtonProps;
     TextField: TextFieldProps;
     LazyColumn: LazyColumnProps;
     Spacer: SpacerProps;
@@ -167,6 +180,7 @@ export const Row = "Row";
 export const Box = "Box";
 export const Text = "Text";
 export const Button = "Button";
+export const RadioButton = "RadioButton";
 export const TextField = "TextField";
 export const LazyColumn = "LazyColumn";
 export const Spacer = "Spacer";

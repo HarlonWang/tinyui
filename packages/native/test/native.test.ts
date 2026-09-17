@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
 import { Column, h, Text, thunk } from "@tiny-ui/core";
-import { events, http, navigation, store } from "../src/index.ts";
+import { events, host, http, navigation, store } from "../src/index.ts";
 
 type Entries = { mount(page: unknown, props: string, host: string): void; unmount(): void; flush(): void; resolve(id: number, json: string): void; emit(topic: string, json: string): void };
 const tinyui = (): Entries => (globalThis as Record<string, unknown>)["__tinyui"] as Entries;
@@ -19,6 +19,15 @@ describe("@tiny-ui/native", () => {
         tinyui().resolve(call.cbId, JSON.stringify({ status: 200, body: { ok: true } }));
         await drain();
         assert.deepEqual(await p, { status: 200, body: { ok: true } });
+    });
+
+    it("host.call is a J3 under the host's own name", async () => {
+        const p = host.call<{ url: string }>("checkout.start", { plan: "annual" });
+        const call = bridge.calls.at(-1)!;
+        assert.deepEqual([call.name, call.args], ["checkout.start", { plan: "annual" }]);
+        tinyui().resolve(call.cbId, JSON.stringify({ url: "https://pay" }));
+        await drain();
+        assert.deepEqual(await p, { url: "https://pay" });
     });
 
     it("store.watch reads the snapshot, subscribes, and follows K5", () => {

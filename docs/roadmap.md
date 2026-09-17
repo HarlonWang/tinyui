@@ -39,6 +39,7 @@
 | E3 错误 code 表、K 入口超时阈值、连续事件节流阈值 | ADR-002 / 004 | 已定（native-api.md §6） |
 | `Placeholder` 在 release 的表现 | ADR-003 | 已定（components.md §5：零尺寸空 Box） |
 | 错误上报：`PageError` 单 sink、E7 接入、栈经 source map 回映射到 `.tsx`、buildId | ADR-002 §3.5 | 已完成（2026-09-17，[build-chain.md](./build-chain.md) §7） |
+| 宿主自定义能力 `host.call`、`Button` children、`RadioButton`、作为 included build 被宿主 App 吃（`gradle/composite-substitutions`） | TrendingAI 订阅页 | 已完成（2026-09-17，[native-api.md](./native-api.md) §7、[components.md](./components.md) §3） |
 
 ## D. 明确推迟（记录不做，触发条件写清）
 

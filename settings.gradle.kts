@@ -19,8 +19,11 @@ dependencyResolutionManagement {
 rootProject.name = "tinyui"
 
 include(":compose")
-include(":sample:shared")
-include(":sample:androidApp")
+// as an included build of a host App only the library is wanted; the sample would drag its Node toolchain and app shell into that composite
+if (gradle.parent == null) {
+    include(":sample:shared")
+    include(":sample:androidApp")
+}
 
 // 本地联调 quickjs-kmp：local.properties 写 quickjs-kmp.dir=<仓路径> 即从源码构建，
 // 坐标 → 项目路径的映射由该仓 gradle/composite-substitutions 声明；CI 没有 local.properties，解析 Maven 版本。

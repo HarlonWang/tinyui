@@ -32,6 +32,10 @@ abstract fun interface wang.harlon.tinyui/Config { // wang.harlon.tinyui/Config|
     }
 }
 
+abstract fun interface wang.harlon.tinyui/HostCapability { // wang.harlon.tinyui/HostCapability|null[0]
+    abstract suspend fun call(kotlin/String): kotlin/String? // wang.harlon.tinyui/HostCapability.call|call(kotlin.String){}[0]
+}
+
 abstract fun interface wang.harlon.tinyui/I18n { // wang.harlon.tinyui/I18n|null[0]
     abstract fun translate(kotlin/String, kotlin/String): kotlin/String? // wang.harlon.tinyui/I18n.translate|translate(kotlin.String;kotlin.String){}[0]
 
@@ -258,8 +262,10 @@ final class wang.harlon.tinyui/HostException : kotlin/Exception { // wang.harlon
 }
 
 final class wang.harlon.tinyui/HostServices { // wang.harlon.tinyui/HostServices|null[0]
-    constructor <init>(wang.harlon.tinyui/Navigator = ..., wang.harlon.tinyui/Store = ..., wang.harlon.tinyui/HttpClient = ..., wang.harlon.tinyui/I18n = ..., wang.harlon.tinyui/Config = ..., wang.harlon.tinyui/EventBus = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ...) // wang.harlon.tinyui/HostServices.<init>|<init>(wang.harlon.tinyui.Navigator;wang.harlon.tinyui.Store;wang.harlon.tinyui.HttpClient;wang.harlon.tinyui.I18n;wang.harlon.tinyui.Config;wang.harlon.tinyui.EventBus;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    constructor <init>(wang.harlon.tinyui/Navigator = ..., wang.harlon.tinyui/Store = ..., wang.harlon.tinyui/HttpClient = ..., wang.harlon.tinyui/I18n = ..., wang.harlon.tinyui/Config = ..., wang.harlon.tinyui/EventBus = ..., kotlin.collections/Map<kotlin/String, kotlin/String> = ..., kotlin.collections/Map<kotlin/String, wang.harlon.tinyui/HostCapability> = ...) // wang.harlon.tinyui/HostServices.<init>|<init>(wang.harlon.tinyui.Navigator;wang.harlon.tinyui.Store;wang.harlon.tinyui.HttpClient;wang.harlon.tinyui.I18n;wang.harlon.tinyui.Config;wang.harlon.tinyui.EventBus;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,wang.harlon.tinyui.HostCapability>){}[0]
 
+    final val capabilities // wang.harlon.tinyui/HostServices.capabilities|{}capabilities[0]
+        final fun <get-capabilities>(): kotlin.collections/Map<kotlin/String, wang.harlon.tinyui/HostCapability> // wang.harlon.tinyui/HostServices.capabilities.<get-capabilities>|<get-capabilities>(){}[0]
     final val config // wang.harlon.tinyui/HostServices.config|{}config[0]
         final fun <get-config>(): wang.harlon.tinyui/Config // wang.harlon.tinyui/HostServices.config.<get-config>|<get-config>(){}[0]
     final val deviceInfo // wang.harlon.tinyui/HostServices.deviceInfo|{}deviceInfo[0]
@@ -527,6 +533,8 @@ final object wang.harlon.tinyui.components.generated/BuiltinSchemas { // wang.ha
         final fun <get-Column>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.Column.<get-Column>|<get-Column>(){}[0]
     final val LazyColumn // wang.harlon.tinyui.components.generated/BuiltinSchemas.LazyColumn|{}LazyColumn[0]
         final fun <get-LazyColumn>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.LazyColumn.<get-LazyColumn>|<get-LazyColumn>(){}[0]
+    final val RadioButton // wang.harlon.tinyui.components.generated/BuiltinSchemas.RadioButton|{}RadioButton[0]
+        final fun <get-RadioButton>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.RadioButton.<get-RadioButton>|<get-RadioButton>(){}[0]
     final val Row // wang.harlon.tinyui.components.generated/BuiltinSchemas.Row|{}Row[0]
         final fun <get-Row>(): wang.harlon.tinyui.schema/ComponentSchema // wang.harlon.tinyui.components.generated/BuiltinSchemas.Row.<get-Row>|<get-Row>(){}[0]
     final val Spacer // wang.harlon.tinyui.components.generated/BuiltinSchemas.Spacer|{}Spacer[0]

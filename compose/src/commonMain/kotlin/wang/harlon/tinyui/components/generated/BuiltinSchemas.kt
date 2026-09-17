@@ -77,9 +77,24 @@ object BuiltinSchemas {
     val Button = ComponentSchema(
         type = "Button",
         props = mapOf(
-            "text" to PropSpec.Str(default = null, required = true, initial = false),
+            "text" to PropSpec.Str(default = "", required = false, initial = false),
             "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
             "variant" to PropSpec.Enum(values = setOf("filled", "outlined", "text"), default = "filled", required = false, initial = false),
+        ),
+        events = mapOf(
+            "onClick" to emptyMap(),
+        ),
+        commands = mapOf(
+        ),
+        children = true,
+        layout = true,
+    )
+
+    val RadioButton = ComponentSchema(
+        type = "RadioButton",
+        props = mapOf(
+            "selected" to PropSpec.Bool(default = null, required = true, initial = false),
+            "enabled" to PropSpec.Bool(default = true, required = false, initial = false),
         ),
         events = mapOf(
             "onClick" to emptyMap(),
@@ -139,7 +154,7 @@ object BuiltinSchemas {
         layout = true,
     )
 
-    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, TextField, LazyColumn, Spacer)
+    val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, RadioButton, TextField, LazyColumn, Spacer)
 
     /** Theme token names the schema DSL knows; Theme.kt must resolve each (checked by test). */
     val colorTokens: Set<String> = setOf("primary", "onPrimary", "primaryContainer", "onPrimaryContainer", "inversePrimary", "secondary", "onSecondary", "secondaryContainer", "onSecondaryContainer", "tertiary", "onTertiary", "tertiaryContainer", "onTertiaryContainer", "background", "onBackground", "surface", "onSurface", "surfaceVariant", "onSurfaceVariant", "surfaceTint", "inverseSurface", "inverseOnSurface", "error", "onError", "errorContainer", "onErrorContainer", "outline", "outlineVariant", "scrim", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primaryFixed", "primaryFixedDim", "onPrimaryFixed", "onPrimaryFixedVariant", "secondaryFixed", "secondaryFixedDim", "onSecondaryFixed", "onSecondaryFixedVariant", "tertiaryFixed", "tertiaryFixedDim", "onTertiaryFixed", "onTertiaryFixedVariant")
