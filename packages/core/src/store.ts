@@ -89,7 +89,10 @@ const handlers: ProxyHandler<object> = {
         if (typeof key === "symbol") return value;
         // array methods are read through here too; only elements and length are state
         if (!Array.isArray(target) || key === "length" || isIndex(key)) observe(target, key);
-        return wrap(value);
+        if (!isWrappable(value)) return value;
+        // the get invariant: a non-configurable, non-writable property must come back as its own value
+        const d = Reflect.getOwnPropertyDescriptor(target, key);
+        return d && !d.configurable && !d.writable ? value : wrap(value);
     },
     has(target, key) {
         if (typeof key !== "symbol") observe(target, key);
@@ -105,6 +108,7 @@ const handlers: ProxyHandler<object> = {
         const old = (target as Record<Key, unknown>)[key];
         const length = Array.isArray(target) ? target.length : -1;
         const ok = Reflect.set(target, key, raw, receiver);
+        if (!ok) return false;
         if (!had) changed(target, KEYS);
         if (!had || old !== raw) changed(target, key);
         if (length >= 0) {
@@ -119,7 +123,7 @@ const handlers: ProxyHandler<object> = {
     deleteProperty(target, key) {
         const had = Object.prototype.hasOwnProperty.call(target, key);
         const ok = Reflect.deleteProperty(target, key);
-        if (had) {
+        if (ok && had) {
             changed(target, key);
             changed(target, KEYS);
         }

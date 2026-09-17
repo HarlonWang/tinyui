@@ -86,6 +86,21 @@ describe("createStore", () => {
         assert.equal(runs, 2);
     });
 
+    it("keeps Proxy invariants and stays silent on writes that fail", () => {
+        const inner = { n: 1 };
+        const raw: { locked: { n: number }; open?: { n: number } } = { locked: inner };
+        Object.defineProperty(raw, "locked", { value: inner, writable: false, configurable: false, enumerable: true });
+        const store = createStore(raw);
+        assert.equal(store.locked, inner, "a non-configurable, non-writable property comes back unwrapped");
+        const sealed = createStore(Object.seal({ a: 1 }) as { a: number; b?: number });
+        let runs = 0;
+        render(() => effect(() => { sealed.b; runs++; }));
+        assert.throws(() => { sealed.b = 2; }, TypeError);
+        assert.throws(() => { delete (sealed as { a?: number }).a; }, TypeError);
+        runPending();
+        assert.equal(runs, 1, "a rejected write queues nothing");
+    });
+
     it("unwrap returns plain data and rejects non-objects at creation", () => {
         const store = createStore({ user: { name: "a" }, list: [{ id: 1 }] });
         const copy = { ...store, extra: store.user };
