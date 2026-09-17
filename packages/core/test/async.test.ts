@@ -25,10 +25,11 @@ describe("resource + K3", () => {
         unmount();
     });
 
-    it("rejection lands in error() and is not reported", async () => {
+    it("rejection lands in error() with the call site's stack and is not reported", async () => {
+        let seen: HostError | undefined;
         mount(() => {
             const [, { error }] = resource(() => call("http.get"));
-            return h(Column, null, h(Text, { text: thunk(() => { const e = error(); return e instanceof HostError ? e.code : "ok"; }) }));
+            return h(Column, null, h(Text, { text: thunk(() => { const e = error(); if (e instanceof HostError) seen = e; return e instanceof HostError ? e.code : "ok"; }) }));
         });
         tinyui().reject(bridge.calls.at(-1)!.cbId, JSON.stringify({ code: "E_NET", message: "offline" }));
         await drain();
@@ -36,6 +37,7 @@ describe("resource + K3", () => {
         tinyui().flush();
         assert.deepEqual(bridge.applied.slice(before).flat(), [["p", 1, "text", "E_NET"]]);
         assert.equal(bridge.reports.length, 0);
+        assert.match(seen!.stack ?? "", /async\.test/, "the stack is where call() happened, not where reject() arrived");
         unmount();
     });
 

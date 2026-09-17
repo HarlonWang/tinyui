@@ -50,7 +50,6 @@ import wang.harlon.quickjs.JsRuntime
 import wang.harlon.quickjs.JsValue
 import wang.harlon.quickjs.ObjectTransport
 import wang.harlon.tinyui.node.NodeTree
-import wang.harlon.tinyui.node.PatchProblem
 import wang.harlon.tinyui.node.UINode
 import wang.harlon.tinyui.schema.ComponentRegistry
 import wang.harlon.tinyui.schema.NodeScope
@@ -59,15 +58,15 @@ import wang.harlon.tinyui.schema.SizeValue
 /** Bytecode of the runtime modules every page imports, as `tinyui build` writes them under `runtime/`. */
 class RuntimeBundle(val core: ByteArray, val native: ByteArray)
 
-/** Everything the host learns about a page's health, in one place (docs/adr-002 §3.5). */
-interface PageSink {
-    fun patchProblem(problem: PatchProblem)
-    fun businessError(entry: String, message: String, stack: String?)
-    fun log(line: String)
-}
+/** One page's bytecode; [name] is the module name (`pages/todos`) and [buildId] comes from `manifest.json`. */
+class PageModule(val name: String, val bytecode: ByteArray, val buildId: String = "")
 
-/** The page's failure: engine gone, error page to be rendered by the host. */
-class PageFailure(val kind: String, val message: String)
+/** Everything the host learns about a page's health, in one place (docs/adr-002 §3.5). */
+/** The page's failure (E2 / E6): engine gone, error page to be rendered by the host. */
+class PageFailure(val error: PageError) {
+    val kind: String get() = error.kind
+    val message: String get() = error.message
+}
 
 /**
  * One page: its engine, coroutine scope and node tree (docs/adr-002 §3.4). Every K entry is
@@ -77,15 +76,16 @@ class PageFailure(val kind: String, val message: String)
 @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class PageHost(
     private val runtimeBundle: RuntimeBundle,
-    private val page: ByteArray,
+    private val page: PageModule,
     val registry: ComponentRegistry,
     private val sink: PageSink,
     private val services: HostServices = HostServices.Default,
     private val propsJson: String = "{}",
     /** K entries longer than this are interrupted and fail the page (docs/native-api.md §6). */
     private val entryTimeoutMs: Long = 5_000,
+    private val sourceMaps: SourceMaps = SourceMaps.EMPTY,
 ) {
-    val tree = NodeTree(registry, sink::patchProblem)
+    val tree = NodeTree(registry) { report("E5", it.reason, op = it.op) }
     var failure: PageFailure? by mutableStateOf(null)
         private set
 
@@ -94,7 +94,10 @@ class PageHost(
     private val subscriptions = HashMap<String, AutoCloseable>()
     private val storeVersions = HashMap<String, Long>()
     private val jsThread = newSingleThreadContext("tinyui-page")
-    private val runtime = JsRuntime(JsEngineConfig(moduleScheme = MODULE_SCHEME, logger = sink::log), jsThread)
+    private val runtime = JsRuntime(
+        JsEngineConfig(moduleScheme = MODULE_SCHEME, logger = sink::log, onUnhandledRejection = { report("E7", it.message ?: "unhandled rejection", stack = it.jsStack) }),
+        jsThread,
+    )
     private var entries: Entries? = null
 
     private class Entries(val self: JsRef, val fns: Map<String, JsRef>) {
@@ -112,7 +115,7 @@ class PageHost(
                     step("registering @tiny-ui/native") { registerModule(runtimeBundle.native) }
                     // a registered module only runs on its first import; the runtime must be up before the page
                     evaluateModule("import \"@tiny-ui/core\"; import \"@tiny-ui/native\";").close()
-                    val namespace = runBytecode(page, ObjectTransport.REF) as JsRef
+                    val namespace = runBytecode(page.bytecode, ObjectTransport.REF) as JsRef
                     if (namespace.isPromise) { namespace.close(); error("page module is still pending after microtasks were drained") }
                     val self = evaluate("__tinyui", objects = ObjectTransport.REF) as JsRef
                     val fns = ENTRY_NAMES.associateWith { self.get(it, ObjectTransport.REF) as JsRef }
@@ -186,9 +189,14 @@ class PageHost(
         try { block() } catch (t: Throwable) { throw IllegalStateException("$what: ${t.message}", t) }
 
     private fun fail(kind: String, t: Throwable) {
-        val message = (t as? JsException)?.let { "${it.message}\n${it.jsStack ?: ""}" } ?: t.message ?: t.toString()
-        sink.log("page failed ($kind): $message")
-        failure = PageFailure(kind, message)
+        val error = report(kind, t.message ?: t.toString(), stack = (t as? JsException)?.jsStack)
+        failure = PageFailure(error)
+    }
+
+    private fun report(kind: String, message: String, entry: String? = null, stack: String? = null, op: String? = null): PageError {
+        val error = PageError(kind, page.name, page.buildId, message, entry, stack, sourceMaps.frames(stack), op)
+        sink.error(error)
+        return error
     }
 
     private fun registerHost(engine: JsEngine) {
@@ -201,13 +209,14 @@ class PageHost(
             val detail = (args[1] as? JsValue.Str)?.value ?: ""
             val fields = runCatching { Json.parseToJsonElement(detail).jsonObject }.getOrNull()
             if (kind == "E1" && fields != null) {
-                sink.businessError(
+                report(
+                    "E1",
+                    fields["message"]?.jsonPrimitive?.contentOrNull ?: "",
                     entry = fields["entry"]?.jsonPrimitive?.contentOrNull ?: "?",
-                    message = fields["message"]?.jsonPrimitive?.contentOrNull ?: "",
                     stack = fields["stack"]?.jsonPrimitive?.contentOrNull,
                 )
             } else {
-                sink.businessError(entry = "?", message = "unparseable $kind report: $detail", stack = null)
+                report("E1", "unparseable $kind report: $detail")
             }
             JsValue.Undefined
         }

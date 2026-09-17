@@ -272,8 +272,11 @@ export default function Home(props: HomeProps): Node { … }
 |---|---|
 | E1 handler / 回调抛错 | `dispatch` / `resolve` / `reject` / `emit` 内 catch → `__host_report("E1")` → 入口正常返回，Kotlin 照常调 `flush()` |
 | E2 渲染期抛错 | `mount()` 或 `flush()` **直接抛出**（`JsException` 带 JS 栈），运行时先清空 patch 缓冲；Kotlin 不再调 `flush()`，判页面失败 |
-| E3 `reject` 到达 | 对应 Promise reject；无人 catch 走 E7（引擎的 unhandled rejection 回调，Kotlin 侧接） |
+| E3 `reject` 到达 | 对应 Promise reject 为 `HostError`，其 `stack` 是 J3 调用点（`call()` 时记下），不是 `reject` 到达处；无人 catch 走 E7（引擎的 unhandled rejection 回调，Kotlin 侧接） |
 | E4 `__host_query` 抛错 | 在 JS 里是普通异常，落入 E1 |
+| E7 未处理 rejection | quickjs-kmp `onUnhandledRejection` → Kotlin `PageError("E7")`，页面继续 |
+
+Kotlin 侧的统一上报对象 `PageError` 与栈回映射见 [build-chain.md](./build-chain.md) §7。
 
 ## 10. 与 ADR 的差异说明
 

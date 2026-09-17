@@ -15,27 +15,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import wang.harlon.tinyui.BuildManifest
 import wang.harlon.tinyui.HostException
 import wang.harlon.tinyui.HostServices
 import wang.harlon.tinyui.HttpClient
 import wang.harlon.tinyui.HttpRequest
 import wang.harlon.tinyui.HttpResponse
+import wang.harlon.tinyui.PageError
+import wang.harlon.tinyui.PageModule
 import wang.harlon.tinyui.PageSink
 import wang.harlon.tinyui.RuntimeBundle
+import wang.harlon.tinyui.SourceMaps
+import wang.harlon.tinyui.TinyUI
 import wang.harlon.tinyui.TinyUIPage
 import wang.harlon.tinyui.components.registerBuiltins
-import wang.harlon.tinyui.node.PatchProblem
 import wang.harlon.tinyui.sample.res.Res
 import wang.harlon.tinyui.schema.ComponentRegistry
 
-private class Bundle(val runtime: RuntimeBundle, val page: ByteArray)
+private class Bundle(val runtime: RuntimeBundle, val page: PageModule, val maps: SourceMaps)
 
 /** App-level, built once (docs/adr-003 §3.3). */
 private val registry = ComponentRegistry().registerBuiltins()
 
 private val sink = object : PageSink {
-    override fun patchProblem(problem: PatchProblem) = println("TinyUI E5 $problem")
-    override fun businessError(entry: String, message: String, stack: String?) = println("TinyUI E1 [$entry] $message")
+    override fun error(error: PageError) = println("TinyUI $error")
     override fun log(line: String) = println("TinyUI $line")
 }
 
@@ -58,18 +61,26 @@ private val services = HostServices(http = FakeTodos, deviceInfo = mapOf("app" t
 fun App() {
     var bundle by remember { mutableStateOf<Bundle?>(null) }
     LaunchedEffect(Unit) {
+        TinyUI.debug = true
+        val manifest = BuildManifest.parse(Res.readBytes("files/tinyui/manifest.json").decodeToString())
+        // debug builds ship the maps; without them (-Ptinyui.maps=false) stacks stay as the engine printed them
+        val maps = (manifest.runtime + manifest.pages).mapNotNull { name ->
+            val file = if (name.startsWith("@tiny-ui/")) "runtime/" + name.removePrefix("@tiny-ui/") else name
+            runCatching { Res.readBytes("files/tinyui/$file.js.map").decodeToString() }.getOrNull()?.let { name to it }
+        }.toMap()
         bundle = Bundle(
             RuntimeBundle(
                 core = Res.readBytes("files/tinyui/runtime/core.bin"),
                 native = Res.readBytes("files/tinyui/runtime/native.bin"),
             ),
-            page = Res.readBytes("files/tinyui/pages/todos.bin"),
+            page = PageModule("pages/todos", Res.readBytes("files/tinyui/pages/todos.bin"), manifest.buildId("pages/todos")),
+            maps = SourceMaps(maps),
         )
     }
     MaterialTheme {
         Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
             val b = bundle
-            if (b == null) Text("loading…") else TinyUIPage(b.runtime, b.page, registry, sink, services)
+            if (b == null) Text("loading…") else TinyUIPage(b.runtime, b.page, registry, sink, services, sourceMaps = b.maps)
         }
     }
 }

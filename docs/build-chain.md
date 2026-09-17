@@ -1,8 +1,8 @@
 # 构建链：TSX → ESM 模块字节码
 
-- 状态：已完成（2026-09-16，PR #2）；sample 在 Android 模拟器与 iOS 模拟器上显示 `tinyui:pages/home`
+- 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；sample 在 Android 模拟器与 iOS 模拟器上显示 `tinyui:pages/home`
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
-- 范围：`@tiny-ui/cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、字节码行号回映射、`qjsc-kmp` 二进制分发、页面级配置文件不在本期
+- 范围：`@tiny-ui/cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、`qjsc-kmp` 二进制分发、页面级配置文件不在本期；字节码行号回映射见 §7
 
 ## 1. 目标与验收
 
@@ -98,4 +98,16 @@ rolldown 是真正的备选（Rollup 同形 API、oxc 转译）。CLI 只包一�
 | `settings.gradle.kts` | 有 `quickjs-kmp.dir` 时把 `qjsc-kmp` 路径传给 Exec 任务 |
 | CI | gradle job 加 setup-node + pnpm，clone quickjs-kmp 的 catalog 版本 tag 编 `buildHostTools`（qjsc-kmp）与 `buildNativeHostJni`（Android host 测试要加载宿主 JNI 库，Maven 包里没有），经 `TINYUI_QJSC` / `TINYUI_QUICKJS_HOST_JNI` 传入；ios.yml 同样 |
 
-source map 随 `.js` 输出到 `.map`；行列号回映射到 TSX 归 E1 / E2 错误上报那一期。
+## 7. 错误上报与 source map
+
+定于 2026-09-17。七类错误（ADR-002 §3.5，E1～E7）统一成一个 `PageError`（kind、页面模块名、buildId、message、E1 的入口名、原始 JS 栈、解析 / 映射后的帧、E5 的 op 原文）经 `PageSink.error()` 交给宿主；`console.*` 与引擎日志仍走 `PageSink.log()`。E2 / E6 同时置 `PageHost.failure`，错误页由 Kotlin 渲染，`TinyUI.debug` 为 true 时显示映射后的栈；E1 / E7 只上报不叠层，页面继续。
+
+**栈的形态**：QuickJS 打印 `at fn (模块名:行:列)`，`--strip-source` 保留行与列（宿主测试断言）。J3 的 `HostError` 在 K3 `reject` 处创建，它自己的栈只会指向 core 的入口，所以 `call()` 时先记下调用点的栈（约 1 µs），rejection 带着它——`await http.get` 无人 catch 的 E7 因此指向业务的 `await` 那一行。
+
+**回映射在哪做**：dev 构建把 `.js.map` 一起打进 App，Kotlin 侧 `SourceMaps` 按模块名惰性解析（source map v3 的 VLQ，约百行，无依赖），只解析栈里出现的行；release 不进包，sink 拿到原始栈 + `buildId`，离线对 map（Sentry / Crashlytics 的做法）。否掉 JS 侧运行时映射：字节码与内存都涨，出错时还要跑 JS。
+
+**buildId**：CLI 对每个模块的 `.js` 取 sha256 前 8 位写进 `manifest.json` 的 `buildIds`，`BuildManifest.parse` 读出，`PageModule(name, bytecode, buildId)` 交给 `PageHost`。宿主发布时把 `out/` 目录整体归档即可对回。
+
+**map 的路径**：thunk pass 的内联 map 以绝对路径作 `source`（相对路径会被 esbuild 再按文件目录解析一次，出现 `src/pages/src/pages/` 的重复，2026-09-17 修），esbuild 输出后 CLI 把 `sources` 改写为相对项目根（`src/pages/todos.tsx`、`../../packages/core/src/host.ts`），运行时与离线符号化都以此显示。
+
+**sample 的接线**：`collectTinyUIResources` 默认连 `.js.map` 一起进资源，`-Ptinyui.maps=false` 不带；`App.kt` 读 manifest，能读到的 map 交给 `SourceMaps`，读不到就按原始栈上报。真实 App 按构建变体决定要不要带 map，库不替宿主决定。

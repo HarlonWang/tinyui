@@ -1,12 +1,19 @@
 package wang.harlon.tinyui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
 import wang.harlon.tinyui.schema.ComponentRegistry
 
 /**
@@ -16,16 +23,19 @@ import wang.harlon.tinyui.schema.ComponentRegistry
 @Composable
 fun TinyUIPage(
     runtime: RuntimeBundle,
-    page: ByteArray,
+    page: PageModule,
     registry: ComponentRegistry,
     sink: PageSink,
     services: HostServices = HostServices.Default,
     propsJson: String = "{}",
     modifier: Modifier = Modifier,
-    error: @Composable (PageFailure) -> Unit = { Text("TinyUI page failed (${it.kind}): ${it.message}") },
+    sourceMaps: SourceMaps = SourceMaps.EMPTY,
+    error: @Composable (PageFailure) -> Unit = { PageFailureScreen(it) },
     onHost: (PageHost) -> Unit = {},
 ) {
-    val host = remember(runtime, page, registry, sink, services, propsJson) { PageHost(runtime, page, registry, sink, services, propsJson) }
+    val host = remember(runtime, page, registry, sink, services, propsJson, sourceMaps) {
+        PageHost(runtime, page, registry, sink, services, propsJson, sourceMaps = sourceMaps)
+    }
     DisposableEffect(host) {
         onHost(host)
         host.start()
@@ -41,3 +51,15 @@ fun TinyUIPage(
     }
 }
 
+
+/** The default failure screen: kind and message, plus the stack when [TinyUI.debug] is on. */
+@Composable
+fun PageFailureScreen(failure: PageFailure) {
+    Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+        Text("TinyUI page failed (${failure.kind})", style = MaterialTheme.typography.titleMedium)
+        Text(failure.message, style = MaterialTheme.typography.bodyMedium)
+        if (TinyUI.debug) {
+            for (frame in failure.error.frames) Text(frame.toString(), style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+        }
+    }
+}
