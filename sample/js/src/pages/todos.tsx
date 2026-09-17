@@ -1,47 +1,47 @@
-import { Button, Column, createResource, effect, For, LazyColumn, ref, Row, Show, signal, Text, TextField, untrack, type LazyColumnCommands, type TextFieldCommands } from "@tiny-ui/core";
+import { Button, Column, effect, For, LazyColumn, observable, ref, resource, Row, Show, Text, TextField, untrack, type LazyColumnCommands, type TextFieldCommands } from "@tiny-ui/core";
 import { http } from "@tiny-ui/native";
 
 interface Todo { id: number; title: string; done: boolean }
 interface Page { items: Todo[]; next: number | null }
 
 export default function Todos() {
-    const [todos, setTodos] = signal<Todo[]>([]);
-    const [next, setNext] = signal<number | null>(1);
-    const [loading, setLoading] = signal(false);
-    const [first, firstMeta] = createResource(() => http.get<Page>("/todos?page=1"));
+    const state = observable({ todos: [] as Todo[], next: 1 as number | null, loading: false });
+    const [first, firstMeta] = resource(() => http.get<Page>("/todos?page=1"));
     effect(() => {
         const r = first();
-        if (r) untrack(() => { setTodos(r.body.items); setNext(r.body.next); });
+        if (r) untrack(() => { state.todos = r.body.items; state.next = r.body.next; });
     });
     const list = ref<LazyColumnCommands>();
     const input = ref<TextFieldCommands>();
 
     async function loadMore() {
-        const page = next();
-        if (page === null || loading()) return;
-        setLoading(true);
+        const page = state.next;
+        if (page === null || state.loading) return;
+        state.loading = true;
         try {
             const { body } = await http.get<Page>(`/todos?page=${page}`);
-            setTodos([...todos(), ...body.items]);
-            setNext(body.next);
+            state.todos.push(...body.items);
+            state.next = body.next;
         } finally {
-            setLoading(false);
+            state.loading = false;
         }
     }
 
     function add(title: string) {
         if (!title.trim()) return;
-        setTodos([...todos(), { id: Date.now(), title: title.trim(), done: false }]);
+        state.todos.push({ id: Date.now(), title: title.trim(), done: false });
         input.cmd("setText", { text: "" });
-        list.cmd("scrollTo", { index: todos().length - 1 });
+        list.cmd("scrollTo", { index: state.todos.length - 1 });
     }
 
-    const toggle = (id: number) => setTodos(todos().map((t) => (t.id === id ? { ...t, done: !t.done } : t)));
-    const remove = (id: number) => setTodos(todos().filter((t) => t.id !== id));
+    const remove = (id: number) => {
+        const at = state.todos.findIndex((t) => t.id === id);
+        if (at >= 0) state.todos.splice(at, 1);
+    };
 
     return (
         <Column width="fill" height="fill" padding={16} gap={12}>
-            <Text text={`${todos().length} todos · ${todos().filter((t) => t.done).length} done`} fontSize={20} fontWeight="bold" />
+            <Text text={`${state.todos.length} todos · ${state.todos.filter((t) => t.done).length} done`} fontSize={20} fontWeight="bold" />
             <Show when={first()} fallback={() => <Text text={firstMeta.error() ? "failed to load" : "loading…"} />}>
                 {() => (
                     <Column width="fill" gap={12}>
@@ -50,8 +50,8 @@ export default function Todos() {
                             <Button text="Add" variant="outlined" onClick={() => input.cmd("focus")} />
                         </Row>
                         <LazyColumn ref={list} width="fill" gap={4} onReachEnd={() => loadMore()}>
-                            <For each={todos()} key={(t) => t.id}>
-                                {(todo) => <TodoRow todo={todo()} onToggle={() => toggle(todo().id)} onRemove={() => remove(todo().id)} />}
+                            <For each={state.todos} key={(t) => t.id}>
+                                {(todo) => <TodoRow todo={todo()} onRemove={() => remove(todo().id)} />}
                             </For>
                         </LazyColumn>
                     </Column>
@@ -61,9 +61,9 @@ export default function Todos() {
     );
 }
 
-function TodoRow(props: { todo: Todo; onToggle: () => void; onRemove: () => void }) {
+function TodoRow(props: { todo: Todo; onRemove: () => void }) {
     return (
-        <Row width="fill" gap={8} align="center" justify="spaceBetween" padding={8} background={props.todo.done ? "#EEF7EE" : "#F4F4F4"} cornerRadius={8} onClick={props.onToggle}>
+        <Row width="fill" gap={8} align="center" justify="spaceBetween" padding={8} background={props.todo.done ? "#EEF7EE" : "#F4F4F4"} cornerRadius={8} onClick={() => { props.todo.done = !props.todo.done; }}>
             <Text text={props.todo.title} color={props.todo.done ? "#888888" : "#222222"} />
             <Button text="remove" variant="text" onClick={props.onRemove} />
         </Row>

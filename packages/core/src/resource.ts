@@ -7,8 +7,8 @@ export interface ResourceActions {
 }
 
 /** docs/runtime-api.md §6: signals are created now, written when the promise settles. */
-export function createResource<T>(fetcher: () => Promise<T>): [data: () => T | undefined, actions: ResourceActions] {
-    if (!insideRender()) throw new Error("createResource() called outside a synchronous render period");
+export function resource<T>(fetcher: () => Promise<T>): [data: () => T | undefined, actions: ResourceActions] {
+    if (!insideRender()) throw new Error("resource() called outside a synchronous render period");
     const [data, setData] = signal<T | undefined>(undefined);
     const [loading, setLoading] = signal(false);
     const [error, setError] = signal<unknown>(undefined);

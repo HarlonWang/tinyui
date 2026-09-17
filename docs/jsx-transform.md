@@ -58,7 +58,7 @@ h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.prima
 | `{...props}` 展开属性 | 展开会立刻求值 getter，丢失响应式 | 显式列出属性 |
 | children 里的表达式：`{cond && <A/>}`、`{cond ? <A/> : <B/>}`、`{list.map(...)}`、`{value}` | children 创建后不可变（runtime-api.md §3.1） | `<Show>` / `<For>`；文本走 `text` prop |
 | 非空白的 JSXText：`<Text>hi</Text>` | 同上 | `<Text text="hi" />` |
-| `async` 组件函数上的 JSX（`export default async function`） | 组件必须同步 | `createResource` |
+| `async` 组件函数上的 JSX（`export default async function`） | 组件必须同步 | `resource` |
 
 例外：children 里恰好一个箭头 / 函数表达式（`For` / `Show` 的渲染函数）合法，原样传为 `children`。
 

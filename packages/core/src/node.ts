@@ -123,7 +123,7 @@ function callComponent(type: Component<any>, props: Props | null, children: Chil
     const result: unknown = type(p);
     if (type[CONTROL]) return result as Node;
     if (typeof result !== "number") {
-        const what = result instanceof Promise ? "a Promise (async components are not supported; use createResource)"
+        const what = result instanceof Promise ? "a Promise (async components are not supported; use resource())"
             : Array.isArray(result) ? "several nodes (wrap them in one container)"
             : result instanceof Slot ? "a For / Show (wrap it in one container)"
             : String(result);

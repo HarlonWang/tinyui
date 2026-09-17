@@ -152,7 +152,7 @@ li { margin-bottom: 6px; }
 <tbody>
 <tr><td>owner</td><td><code>mount</code> 建根；<code>Show</code> 每次切分支建一个；<code>For</code> 每建一行建一个</td><td>根 owner 被运行时持有；分支 owner 被 <code>Show</code> 的 cleanup 持有；行 owner 被 <code>For</code> 持有</td><td>dispose：跑名下 effect 的解绑与 cleanups。分支切换、行删除、卸载</td></tr>
 <tr><td>effect</td><td><code>h()</code> 遇到 <code>thunk</code> prop；<code>effect()</code>；<code>For</code> / <code>Show</code> 自己</td><td>创建时的当前 owner</td><td>owner dispose 时；或它所属的 effect 重跑前（effect 内 <code>onCleanup</code>）</td></tr>
-<tr><td>signal</td><td><code>signal()</code>、<code>memo()</code>、<code>createResource()</code>、<code>For</code> 的 item accessor</td><td>不挂任何名下，靠引用存活</td><td>没人引用时被 GC。订阅它的 effect 被解绑后，signal 若无其他引用即回收</td></tr>
+<tr><td>signal</td><td><code>signal()</code>、<code>memo()</code>、<code>resource()</code>、<code>For</code> 的 item accessor</td><td>不挂任何名下，靠引用存活</td><td>没人引用时被 GC。订阅它的 effect 被解绑后，signal 若无其他引用即回收</td></tr>
 <tr><td>节点 id</td><td><code>h()</code> 对内置类型分配</td><td>不是对象，只是整数；Kotlin 侧才有节点</td><td>不回收。<code>r</code> 之后不再出现</td></tr>
 <tr><td>槽位表</td><td><code>h()</code> 处理 children 时</td><td>内置节点</td><td>随节点 <code>r</code></td></tr>
 <tr><td>handler</td><td><code>h()</code> 遇到 <code>onXxx</code></td><td>通过 <code>onCleanup</code> 登记到当前 owner</td><td>owner dispose</td></tr>
@@ -241,13 +241,13 @@ li { margin-bottom: 6px; }
 <h2 id="life">4. 一个页面的一生</h2>
 <p>页面：拉一个待办列表，加载中显示占位，每行点击切换完成态。</p>
 <pre><code>// pages/todos.tsx
-import { signal, createResource, Column, Row, Text, Show, For } from "@tiny-ui/core";
+import { signal, resource, Column, Row, Text, Show, For } from "@tiny-ui/core";
 import { http } from "@tiny-ui/native";
 
 interface Todo { id: number; title: string; done: boolean }
 
 export default function Todos() {
-    const [todos] = createResource(() =&gt; http.get&lt;Todo[]&gt;("/todos"));
+    const [todos] = resource(() =&gt; http.get&lt;Todo[]&gt;("/todos"));
     return (
         &lt;Column&gt;
             &lt;Text text={`${(todos() ?? []).length} todos`} /&gt;
@@ -276,7 +276,7 @@ function TodoRow(props: { todo: Todo }) {
 <h3>4.1 编译</h3>
 <p>CLI 只做两件事：含调用 / 属性访问的属性表达式包成 <code>thunk</code>，JSX 变成 <code>h()</code>。事件、<code>key</code>、<code>fallback</code>、渲染函数是函数，原样保留。</p>
 <pre><code>function Todos() {
-    const [todos] = createResource(() =&gt; http.get("/todos"));
+    const [todos] = resource(() =&gt; http.get("/todos"));
     return h(Column, null,
         h(Text, { text: thunk(() =&gt; `${(todos() ?? []).length} todos`) }),
         h(Show, { when: thunk(() =&gt; todos()), fallback: () =&gt; h(Text, { text: "loading…" }) },
@@ -336,14 +336,14 @@ function TodoRow(props) {
 <div class="tbl"><table>
 <thead><tr><th>步骤</th><th>运行时里发生的</th><th>patch</th></tr></thead>
 <tbody>
-<tr><td><code>createResource</code></td><td>建 <code>data</code> / <code>loading</code> / <code>error</code> 三个 signal；分配 cbId 1 存进 pending 表；<code>__host_call("http.get", 1, …)</code></td><td></td></tr>
+<tr><td><code>resource</code></td><td>建 <code>data</code> / <code>loading</code> / <code>error</code> 三个 signal；分配 cbId 1 存进 pending 表；<code>__host_call("http.get", 1, …)</code></td><td></td></tr>
 <tr><td><code>h(Text, {text: thunk})</code></td><td>分配 id 1；建 effect E1，首跑读 <code>data</code>（undefined）→ 订阅</td><td class="ops">["c",1,"Text"] ["p",1,"text","0 todos"]</td></tr>
 <tr><td><code>h(Show, …)</code></td><td>建 effect E2，首跑读 <code>data</code> → 假 → 建分支 owner O1，在其中调 fallback：id 2</td><td class="ops">["c",2,"Text"] ["p",2,"text","loading…"]</td></tr>
 <tr><td><code>h(Column, null, 节点1, Show槽位)</code></td><td>分配 id 3；槽位表 <code>[节点1, Show(O1: [2])]</code></td><td class="ops">["i",3,1,0] ["i",3,2,1]</td></tr>
 <tr><td><code>mount</code> 收尾</td><td>根节点 3 挂到根容器</td><td class="ops">["i",0,3,0]</td></tr>
 </tbody></table></div>
 <p><code>mount()</code> 返回，Kotlin 调 <code>flush()</code>：pending 队列为空，缓冲里 8 条 op 一次交给 J1。</p>
-<p>Kotlin 拿到响应，<code>resolve(1, "[{id:1,title:'Buy milk',done:false},{id:2,title:'Call mom',done:true}]")</code>。运行时从 pending 表取出 resolver 调用，返回；quickjs-kmp 排空微任务：<code>createResource</code> 的 <code>.then</code> 写 <code>data</code>，E1、E2 入队。Kotlin 调 <code>flush()</code>：</p>
+<p>Kotlin 拿到响应，<code>resolve(1, "[{id:1,title:'Buy milk',done:false},{id:2,title:'Call mom',done:true}]")</code>。运行时从 pending 表取出 resolver 调用，返回；quickjs-kmp 排空微任务：<code>resource</code> 的 <code>.then</code> 写 <code>data</code>，E1、E2 入队。Kotlin 调 <code>flush()</code>：</p>
 <div class="tbl"><table>
 <thead><tr><th>effect</th><th>做什么</th><th>patch</th></tr></thead>
 <tbody>
@@ -384,7 +384,7 @@ function TodoRow(props) {
 <tr><td>children 创建后不可变；结构变化只经 <code>For</code> / <code>Show</code></td><td>编译期报错</td><td>§1：只有 <code>For</code> / <code>Show</code> 开 owner，别处建的节点没人负责删</td></tr>
 <tr><td><code>For</code> / <code>Show</code> 只能直接写在内置节点的 children 里</td><td><code>h()</code> 抛 E2</td><td>§1：槽位表挂在内置节点上，它们需要一个父节点来算 index</td></tr>
 <tr><td>内置 / 宿主节点的 prop 不能是函数（<code>on*</code> 除外）；业务组件的 prop 不限</td><td><code>h()</code> / <code>bindProp</code> 抛 E2，抓的是 <code>text={fmt}</code> 忘了调用</td><td>ADR-002：函数不过桥，边界就是 patch；业务组件之间是纯 JS 调用</td></tr>
-<tr><td>数组 / 对象整体替换才触发</td><td><code>list().push(x)</code> 静默无效</td><td>§3：<code>===</code> 判等；v1 没有 Proxy 追踪</td></tr>
+<tr><td><code>signal</code> 里的数组 / 对象整体替换才触发；要按字段触发用 <code>observable</code></td><td><code>list().push(x)</code> 静默无效</td><td>§3：<code>===</code> 判等；Proxy 追踪只在 store 里（runtime-api.md §2.6）</td></tr>
 <tr><td><code>For</code> 的 item 是 accessor</td><td>写 <code>todo.title</code> 类型错</td><td>§4.4：同 key 元素换引用时更新行而不重建行</td></tr>
 <tr><td><code>Show</code> 只在真值性变化时切分支</td><td></td><td>§4.2：切分支 = 重建整棵分支，值变化不该付这个代价</td></tr>
 <tr><td>同一 flush 内一个 effect 重跑超过 100 次</td><td>抛 E2</td><td>§3：effect 写自己读的 signal 会成环</td></tr>

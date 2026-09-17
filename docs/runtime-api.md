@@ -1,7 +1,7 @@
 # JS 运行时 API：`@tiny-ui/core` v1
 
-- 状态：已定（2026-09-16）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
-- 来源：ADR-001（Signal、所有权）、ADR-002（桥入口、事务、错误）、ADR-004（ref + cmd、事件 payload）、ADR-005（组件函数必须同步、`createResource`、原生 Promise）
+- 状态：已定（2026-09-16；2026-09-17 加 §2.6 `observable`、§1 命名规则，`createResource` 改名 `resource`、`host()` 改名 `manifest()`）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
+- 来源：ADR-001（Signal、所有权）、ADR-002（桥入口、事务、错误）、ADR-004（ref + cmd、事件 payload）、ADR-005（组件函数必须同步、`resource`、原生 Promise）
 - 范围：业务可见的 API、它们的精确语义、页面模块契约、以及运行时与 Kotlin 之间的桥入口（内部契约）。JSX 写法如何变成对这些 API 的调用见 [jsx-transform.md](./jsx-transform.md)；产出的 patch 形态见 [patch-protocol.md](./patch-protocol.md)
 
 ## 1. 一览
@@ -13,18 +13,24 @@
 | | `effect(fn)` | 副作用，依赖变化后在 flush 时重跑 |
 | | `onCleanup(fn)` | 登记清理，随最近的 effect 或结构作用域执行 |
 | | `untrack(fn)` | 读取但不订阅 |
+| | `observable(init)` → 代理对象 | 对象 / 数组的属性级响应式，直接赋值 |
+| | `unwrap(store)` | 取回代理背后的原始数据 |
 | 节点 | `h(type, props, ...children)` → `Node` | 建节点 / 调组件，JSX 的目标 |
 | | `Fragment` | 多个兄弟节点 |
 | | `thunk(fn)` | 编译器包动态 prop 用；业务一般不手写 |
 | 结构 | `For` | keyed 列表 |
 | | `Show` | 条件分支 |
 | 命令 | `ref()` → `Ref`，`ref.cmd(name, args?)` | 对节点发一次性动作 |
-| 异步 | `createResource(fetcher)` | 同步期建 signal，异步期写 |
+| 异步 | `resource(fetcher)` | 同步期建 signal，异步期写 |
 | | `setTimeout` / `clearTimeout` | 全局，经宿主定时器实现 |
 | 页面 | `pageVisible()` | 页面是否可见（K1 `visible`） |
+| | `manifest()` | Kotlin 下发的组件 / 能力清单 |
 | 版本 | `VERSION`、`PROTOCOL` | 包版本；patch 协议版本号 |
+| 内部 | `internal.{call, query, send, onEmit}` | core 与 `@tiny-ui/native` 之间的桥契约（§9），业务不用 |
 
-不在 v1：`createStore`（v1.1）、`createContext`、`ErrorBoundary`、`Suspense`、`Switch/Match`、`Index`、`Portal`、`lazy`、`setInterval`。页内跨组件共享状态直接用模块顶层的 `signal`（每页一个引擎，模块作用域就是页面作用域）。
+不在 v1：`createContext`、`ErrorBoundary`、`Suspense`、`Switch/Match`、`Index`、`Portal`、`lazy`、`setInterval`。页内跨组件共享状态直接用模块顶层的 `signal` / `observable`（每页一个引擎，模块作用域就是页面作用域）。
+
+**命名规则**（2026-09-17 定）：状态与异步原语一律无前缀小写（`signal` / `memo` / `effect` / `resource` / `observable`），不用 `create*`、`use*` 前缀——`use*` 会被读成 React hooks 的"每次渲染重跑"，而组件只跑一次；组件与结构原语首字母大写。`observable` 原拟名 `createStore`（Solid），改名因 "store" 留给 `@tiny-ui/native` 的跨页 KV（业界 store 的主流含义）。
 
 ## 2. 响应式原语
 
@@ -78,6 +84,22 @@ function untrack<T>(fn: () => T): T
 ```
 
 执行 `fn` 期间不建立任何订阅。用于 effect 里"读一下但不想因它重跑"。
+
+### 2.6 `observable`
+
+```ts
+function observable<T extends object>(init: T): T
+function unwrap<T>(value: T): T
+```
+
+- `init` 必须是纯对象或数组，返回它的 Proxy；传入已是 observable 的对象原样返回。可在任何地方创建，不要求渲染期
+- **读即订阅，按属性**：effect 里读 `state.user.name` 只订阅 `user` 对象上的 `name`；`Object.keys` / `for…in` / `JSON.stringify` 订阅键集合；`"k" in state` 订阅 `k` 这个键（增删它时重跑）
+- **写即通知，直接赋值**：`state.user.name = "x"`、`state.list.push(x)`、`splice` / `sort` / `length = 0` / `delete` 都触发；`===` 同值写入不触发。写入时机与 `signal` 相同，在 flush 统一重跑，受同一个更新环检测
+- 嵌套的纯对象 / 数组在第一次读到时才被代理，代理按原对象缓存：`state.list[0] === state.list[0]`。class 实例、`Map` / `Set` / `Date` 按值存放，不深追踪，只有替换引用才触发；冻结对象同样按值
+- 存进去的对象被直接持有（不拷贝）：绕过 Proxy 改原对象不会触发
+- 与 `For` 的配合：`each={state.list}` 时行 accessor `item()` 返回缓存的代理，行内绑定落到属性级——改一行的一个字段只重跑读了它的绑定，`For` 不重算；`push` / `splice` 触发一次 reconcile
+- `unwrap(value)`：返回代理背后的原对象，并把嵌套的代理原地换回原对象；发请求体、打日志时用。非代理原样返回
+- 分工：原始值用 `signal`；有独立变化字段的对象 / 数组用 `observable`；跨页共享走 `@tiny-ui/native` 的 `store`（native-api.md §3）；`signal<T[]>` 整体替换仍合法。不做 `reconcile` / `produce` / 只读视图（roadmap D 组）
 
 ## 3. 节点与组件
 
@@ -144,7 +166,7 @@ interface ForProps<T> {
 - 在一个 effect 里读 `each`，对新旧 key 序列做 keyed reconcile，只产出 `i` / `m` / `r`（算法与 bench `reconcileKeys` 一致）
 - 建行：新建行 owner，在其中调 `children(item, index)`，返回值必须是一个 `Node`，插到对应 index。行 owner 由 `For` 持有，不挂在 `For` 的 effect 之下
 - 删行：dispose 行 owner（解绑该行全部 effect、跑 cleanups、删 handler），发一条 `["r", 行id]`
-- `item()` 是行内的 accessor：同一 key 的元素引用变了（`!==`）就更新，读它的绑定随之重算，行不重建。`index()` 同理。这是 v1 没有 `createStore` 时"整体替换数组"仍能做到行级更新的机制
+- `item()` 是行内的 accessor：同一 key 的元素引用变了（`!==`）就更新，读它的绑定随之重算，行不重建。`index()` 同理。这是不用 `observable`、"整体替换数组"时仍能做到行级更新的机制
 - key 重复抛 E2
 
 ### 4.2 `Show`
@@ -177,10 +199,10 @@ interface Ref { cmd(name: string, args?: Record<string, string | number | boolea
 
 `<LazyColumn ref={list} />` 后 `list.cmd("scrollTo", { index: 0 })` 往本事务的 patch 推 `["x", id, "scrollTo", {"index":0}]`。语义见 ADR-004 §3.2：一次性、晚于组合、无回执。未绑定节点时调用抛错。
 
-## 6. `createResource`
+## 6. `resource`
 
 ```ts
-function createResource<T>(fetcher: () => Promise<T>): [
+function resource<T>(fetcher: () => Promise<T>): [
     data: () => T | undefined,
     { loading: () => boolean; error: () => unknown; refetch: () => void },
 ]
@@ -242,7 +264,7 @@ export default function Home(props: HomeProps): Node { … }
 | J4 | `__host_send` | `(name: string, argsJson: string) => void` | 即发即忘 |
 | J5 | `__host_report` | `(kind: "E1", detailJson: string) => void` | 运行时捕获但不中断事务的业务错误 `{ entry, message, stack }`；`console.*` 走引擎 logger |
 
-`@tiny-ui/native` 是这五个全局的类型化封装（`http.get` = `__host_call("http.get", …)` 包成 Promise），业务不直接碰 `__host_*`。
+`@tiny-ui/native` 是这五个全局的类型化封装（`http.get` = `__host_call("http.get", …)` 包成 Promise），经 core 的 `internal.{call, query, send, onEmit}` 调用；业务不直接碰 `__host_*` 也不碰 `internal`。`internal` 留在主入口而不是子路径 `@tiny-ui/core/internal`：运行时模块按名字注册进引擎的模块表，子路径会成为第三个模块名，要么再注册一个模块、要么被打进 native 的字节码而复制一份 core 的模块状态（pending 表分裂）。
 
 错误分类的运行时侧行为（ADR-002 §3.5）：
 
