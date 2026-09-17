@@ -63,7 +63,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
             modifier = scope.modifier().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
             verticalArrangement = verticalArrangement(scope["justify"], scope["gap"]),
             horizontalAlignment = when (scope.get<String>("align")) { "center" -> Alignment.CenterHorizontally; "end" -> Alignment.End; else -> Alignment.Start },
-        ) { scope.Children { child -> weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
+        ) { scope.Children { child -> if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
     }
     register(BuiltinSchemas.Row) { scope ->
         val scroll = scope.get<Boolean>("scroll") == true
@@ -71,7 +71,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
             modifier = scope.modifier().then(if (scroll) Modifier.horizontalScroll(rememberScrollState()) else Modifier),
             horizontalArrangement = horizontalArrangement(scope["justify"], scope["gap"]),
             verticalAlignment = when (scope.get<String>("align")) { "center" -> Alignment.CenterVertically; "end" -> Alignment.Bottom; else -> Alignment.Top },
-        ) { scope.Children { child -> weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
+        ) { scope.Children { child -> if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
     }
     register(BuiltinSchemas.Box) { scope ->
         Box(modifier = scope.modifier(), contentAlignment = boxAlignment(scope["align"])) { scope.Children() }
@@ -106,6 +106,7 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Spacer) { scope -> Spacer(scope.modifier()) }
 }
 
+// a scrolling axis is unbounded, so there is no remaining space to share: weight is ignored there rather than collapsing the child to 0
 private fun weightOf(child: UINode): Float? = (child.props["weight"] as? Double)?.toFloat()?.takeIf { it > 0f }
 
 private fun verticalArrangement(justify: String?, gap: Dp?): Arrangement.Vertical {

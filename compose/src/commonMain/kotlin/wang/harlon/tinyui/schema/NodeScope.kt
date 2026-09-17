@@ -31,11 +31,11 @@ interface NodeScope {
     fun modifier(clickable: Boolean = true): Modifier
 
     @Composable
-    fun Children() = Children { Modifier }
+    fun Children()
 
     /** Renders the children with a parent-scoped modifier each (`weight` inside Row / Column); it goes outermost on the child. */
     @Composable
-    fun Children(childModifier: (UINode) -> Modifier)
+    fun Children(childModifier: (UINode) -> Modifier) = Children()
 
     /** Renders one child; for components that lay children out themselves (LazyColumn). */
     @Composable

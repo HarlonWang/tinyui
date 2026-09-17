@@ -48,7 +48,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 顺序固定：以后加 prop 只能插进这个序列，不能重排（重排会改变已有页面的视觉）。`padding` 在最里面，所以它是内容内边距；背景、边框和点击区域包含它。
 
-`weight` 需要父作用域：`Row` / `Column` 渲染 children 时按每个 child 的 `weight` 造 `Modifier.weight` 经 CompositionLocal 交给它，child 的 `modifier()` 把它放在最外层；其他容器把这个 local 重置为空，所以写在 `Box` / `LazyColumn` 的直接 child 上不生效、也不报错。
+`weight` 需要父作用域：`Row` / `Column` 渲染 children 时按每个 child 的 `weight` 造 `Modifier.weight` 经 CompositionLocal 交给它，child 的 `modifier()` 把它放在最外层；其他容器把这个 local 重置为空，所以写在 `Box` / `LazyColumn` 的直接 child 上不生效、也不报错；`scroll` 开着的 `Column` / `Row` 主轴无界、没有剩余空间可分，其 child 的 `weight` 同样忽略（否则 Compose 会把它压成 0）。
 
 不在首批的：`margin`（Compose 没有对应，用父容器的 `gap` / `padding`）、`alignSelf`（等需求）。
 

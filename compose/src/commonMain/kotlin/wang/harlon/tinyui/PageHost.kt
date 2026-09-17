@@ -339,6 +339,9 @@ class PageHost(
         }
 
         @Composable
+        override fun Children() = Children { Modifier }
+
+        @Composable
         override fun Children(childModifier: (UINode) -> Modifier) {
             for (child in node.children) key(child.id) {
                 CompositionLocalProvider(LocalChildModifier provides childModifier(child)) { Render(child) }
