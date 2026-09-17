@@ -57,7 +57,7 @@
 | 应用级服务 Runtime（不挂 UI、随 App 生命周期的引擎） | app-model.md | 业务出现不属于任何页面的常驻 JS 逻辑 |
 | 手势组合内置组件 | ADR-004 | 业务需求出现 |
 | `Image` 与图片加载管线（coil3 vs 宿主 loader） | components.md §3 | 出现需要图片的页面 |
-| `weight` / `alignSelf` 等需要父作用域的布局 prop | components.md §2 | `Row` / `Column` 里按比例分配的需求 |
+| ~~`weight`~~ / `alignSelf` 等需要父作用域的布局 prop | components.md §2 | `weight`、`border`、`Column` / `Row` 的 `scroll` 已加（2026-09-17，TrendingAI 订阅页触发）；`alignSelf` 等需求 |
 
 ## 建议顺序与里程碑
 

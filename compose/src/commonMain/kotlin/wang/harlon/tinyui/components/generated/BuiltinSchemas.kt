@@ -12,6 +12,7 @@ object BuiltinSchemas {
             "gap" to PropSpec.Dp(default = 0.0, required = false, initial = false),
             "align" to PropSpec.Enum(values = setOf("start", "center", "end"), default = "start", required = false, initial = false),
             "justify" to PropSpec.Enum(values = setOf("start", "center", "end", "spaceBetween"), default = "start", required = false, initial = false),
+            "scroll" to PropSpec.Bool(default = false, required = false, initial = false),
         ),
         events = mapOf(
             "onClick" to emptyMap(),
@@ -28,6 +29,7 @@ object BuiltinSchemas {
             "gap" to PropSpec.Dp(default = 0.0, required = false, initial = false),
             "align" to PropSpec.Enum(values = setOf("start", "center", "end"), default = "start", required = false, initial = false),
             "justify" to PropSpec.Enum(values = setOf("start", "center", "end", "spaceBetween"), default = "start", required = false, initial = false),
+            "scroll" to PropSpec.Bool(default = false, required = false, initial = false),
         ),
         events = mapOf(
             "onClick" to emptyMap(),

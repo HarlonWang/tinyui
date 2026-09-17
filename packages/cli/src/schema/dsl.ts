@@ -101,9 +101,12 @@ export function defineComponent(name: string, input: ComponentInput = {}): Compo
 
 /** The common layout props every `layout: true` component accepts; order = Modifier order (docs/components.md §2). */
 export const LAYOUT_PROPS: Record<string, PropDef> = {
+    weight: number({ doc: "share of the parent's remaining main-axis space; only as a direct child of Row / Column" }),
     width: size({ doc: "dp, or fill / wrap" }),
     height: size({ doc: "dp, or fill / wrap" }),
     cornerRadius: dp({ doc: "clips background and content" }),
     background: color(),
+    borderWidth: dp({ doc: "drawn inside the corner radius; color defaults to the outline token" }),
+    borderColor: color(),
     padding: dp({ doc: "all four sides" }),
 };

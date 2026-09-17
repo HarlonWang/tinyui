@@ -1,6 +1,7 @@
 package wang.harlon.tinyui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,7 +11,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +54,9 @@ import wang.harlon.quickjs.JsValue
 import wang.harlon.quickjs.ObjectTransport
 import wang.harlon.tinyui.node.NodeTree
 import wang.harlon.tinyui.node.UINode
+import androidx.compose.ui.graphics.RectangleShape
 import wang.harlon.tinyui.schema.ComponentRegistry
+import wang.harlon.tinyui.schema.LocalChildModifier
 import wang.harlon.tinyui.schema.NodeScope
 import wang.harlon.tinyui.schema.SizeValue
 
@@ -316,26 +322,31 @@ class PageHost(
         override fun has(event: String): Boolean = node.events[event] == true
         override fun dispatch(event: String, payload: String) = this@PageHost.dispatch(node.id, event, payload)
 
-        /** docs/components.md §2: size → clip → background → gesture → padding. */
+        /** docs/components.md §2: parent-scoped (weight) → size → clip → background → border → gesture → padding. */
         @Composable
         override fun modifier(clickable: Boolean): Modifier {
-            var m: Modifier = Modifier
+            var m: Modifier = LocalChildModifier.current
             when (val w = get<SizeValue>("width")) { is SizeValue.Fixed -> m = m.width(w.dp); SizeValue.Fill -> m = m.fillMaxWidth(); SizeValue.Wrap -> m = m.wrapContentWidth(); null -> {} }
             when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
-            get<Dp>("cornerRadius")?.let { m = m.clip(RoundedCornerShape(it)) }
+            val shape = get<Dp>("cornerRadius")?.let { RoundedCornerShape(it) } ?: RectangleShape
+            if (shape != RectangleShape) m = m.clip(shape)
             color("background")?.let { m = m.background(it) }
+            // 0.dp is Compose's hairline (one pixel), not "no border"
+            get<Dp>("borderWidth")?.takeIf { it > 0.dp }?.let { m = m.border(it, color("borderColor") ?: MaterialTheme.colorScheme.outline, shape) }
             if (clickable && has("onClick")) m = m.clickable { dispatch("onClick") }
             get<Dp>("padding")?.let { m = m.padding(it) }
             return m
         }
 
         @Composable
-        override fun Children() {
-            for (child in node.children) key(child.id) { Render(child) }
+        override fun Children(childModifier: (UINode) -> Modifier) {
+            for (child in node.children) key(child.id) {
+                CompositionLocalProvider(LocalChildModifier provides childModifier(child)) { Render(child) }
+            }
         }
 
         @Composable
-        override fun RenderChild(child: UINode) = Render(child)
+        override fun RenderChild(child: UINode) = CompositionLocalProvider(LocalChildModifier provides Modifier) { Render(child) }
     }
 
     @Composable

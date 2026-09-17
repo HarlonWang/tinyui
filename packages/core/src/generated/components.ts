@@ -6,10 +6,13 @@ export type ColorToken = "primary" | "onPrimary" | "primaryContainer" | "onPrima
 export type ColorValue = `#${string}` | ColorToken;
 
 export interface LayoutProps {
+    weight?: number;
     width?: number | "fill" | "wrap";
     height?: number | "fill" | "wrap";
     cornerRadius?: number;
     background?: ColorValue;
+    borderWidth?: number;
+    borderColor?: ColorValue;
     padding?: number;
 }
 
@@ -24,6 +27,8 @@ export interface ColumnProps extends LayoutProps {
     align?: "start" | "center" | "end";
     /** main axis */
     justify?: "start" | "center" | "end" | "spaceBetween";
+    /** scrolls along the main axis; padding stays outside the scrolling content */
+    scroll?: boolean;
     onClick?: (e: ColumnClickPayload) => void;
     children?: Node | Node[];
 }
@@ -39,6 +44,8 @@ export interface RowProps extends LayoutProps {
     align?: "start" | "center" | "end";
     /** main axis */
     justify?: "start" | "center" | "end" | "spaceBetween";
+    /** scrolls along the main axis; padding stays outside the scrolling content */
+    scroll?: boolean;
     onClick?: (e: RowClickPayload) => void;
     children?: Node | Node[];
 }
