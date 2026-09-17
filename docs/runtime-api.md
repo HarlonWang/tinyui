@@ -89,7 +89,7 @@ function unwrap<T>(value: T): T
 ```
 
 - `init` 必须是纯对象或数组，返回它的 Proxy；传入已是 store 的对象原样返回。可在任何地方创建，不要求渲染期
-- **读即订阅，按属性**：effect 里读 `store.user.name` 只订阅 `user` 对象上的 `name`；`Object.keys` / `for…in` / `in` / `JSON.stringify` 订阅键集合
+- **读即订阅，按属性**：effect 里读 `store.user.name` 只订阅 `user` 对象上的 `name`；`Object.keys` / `for…in` / `JSON.stringify` 订阅键集合；`"k" in store` 订阅 `k` 这个键（增删它时重跑）
 - **写即通知，直接赋值**：`store.user.name = "x"`、`store.list.push(x)`、`splice` / `sort` / `length = 0` / `delete` 都触发；`===` 同值写入不触发。写入时机与 `signal` 相同，在 flush 统一重跑，受同一个更新环检测
 - 嵌套的纯对象 / 数组在第一次读到时才被代理，代理按原对象缓存：`store.list[0] === store.list[0]`。class 实例、`Map` / `Set` / `Date` 按值存放，不深追踪，只有替换引用才触发；冻结对象同样按值
 - 存进 store 的对象被直接持有（不拷贝）：绕过 Proxy 改原对象不会触发

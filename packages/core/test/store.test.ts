@@ -101,6 +101,16 @@ describe("createStore", () => {
         assert.equal(runs, 1, "a rejected write queues nothing");
     });
 
+    it("notifies by what a setter actually stored", () => {
+        let backing = 1;
+        const store = createStore({ get v() { return backing; }, set v(n: number) { backing = n * 2; } });
+        const seen: number[] = [];
+        render(() => effect(() => seen.push(store.v)));
+        store.v = 1;
+        runPending();
+        assert.deepEqual(seen, [1, 2]);
+    });
+
     it("unwrap returns plain data and rejects non-objects at creation", () => {
         const store = createStore({ user: { name: "a" }, list: [{ id: 1 }] });
         const copy = { ...store, extra: store.user };

@@ -110,7 +110,8 @@ const handlers: ProxyHandler<object> = {
         const ok = Reflect.set(target, key, raw, receiver);
         if (!ok) return false;
         if (!had) changed(target, KEYS);
-        if (!had || old !== raw) changed(target, key);
+        // read back rather than compare with `raw`: a setter may store something else
+        if (!had || (target as Record<Key, unknown>)[key] !== old) changed(target, key);
         if (length >= 0) {
             const now = (target as unknown[]).length;
             // assigning past the end grows an array without a `length` set; truncating drops elements without deletes
