@@ -42,6 +42,16 @@ export function generateTs(components: ComponentDef[], nodeImport = "@tiny-ui/co
     for (const c of components) out.push(`    ${c.name.includes(".") ? JSON.stringify(c.name) : c.name}: ${tsIdent(c.name)}Props;`);
     out.push("}", "");
     for (const c of components) if (!c.name.includes(".")) out.push(`export const ${c.name} = ${JSON.stringify(c.name)};`);
+    // host packages: one object per prefix so pages write <ta.Icon>, and the JSX namespace learns the tags
+    const prefixed = components.filter((c) => c.name.includes("."));
+    if (nodeImport === "@tiny-ui/core" && prefixed.length > 0) {
+        const byPrefix = new Map<string, ComponentDef[]>();
+        for (const c of prefixed) { const [prefix] = c.name.split("."); byPrefix.set(prefix!, [...(byPrefix.get(prefix!) ?? []), c]); }
+        for (const [prefix, cs] of byPrefix) out.push(`export const ${prefix} = { ${cs.map((c) => `${c.name.split(".")[1]}: ${JSON.stringify(c.name)}`).join(", ")} } as const;`);
+        out.push("", `declare module "@tiny-ui/core/jsx-runtime" {`, "    namespace JSX {", "        interface IntrinsicElements {");
+        for (const c of prefixed) out.push(`            ${JSON.stringify(c.name)}: ${tsIdent(c.name)}Props;`);
+        out.push("        }", "    }", "}");
+    }
     return out.join("\n") + "\n";
 }
 

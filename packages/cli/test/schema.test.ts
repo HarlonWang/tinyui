@@ -19,6 +19,13 @@ describe("schema generator", () => {
         assert.match(core, /export type ColorToken = "primary" \|/);
     });
 
+    it("groups host components under their prefix and augments the JSX namespace", () => {
+        const host = generateTs([card]);
+        assert.match(host, /export const pp = \{ Card: "pp\.Card" \} as const;/);
+        assert.match(host, /declare module "@tiny-ui\/core\/jsx-runtime" \{\n    namespace JSX \{\n        interface IntrinsicElements \{\n            "pp\.Card": PpCardProps;/);
+        assert.doesNotMatch(generateTs([card], "../node.ts"), /declare module/);
+    });
+
     it("emits the token name sets only for the built-in object", () => {
         const builtin = generateKt([card], "x", "BuiltinSchemas");
         assert.match(builtin, /val colorTokens: Set<String> = setOf\("primary"/);
