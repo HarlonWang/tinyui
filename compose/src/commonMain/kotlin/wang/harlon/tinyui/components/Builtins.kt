@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -46,6 +48,7 @@ import wang.harlon.tinyui.components.generated.BuiltinSchemas
 import wang.harlon.tinyui.schema.Commands
 import wang.harlon.tinyui.schema.ComponentRegistry
 import wang.harlon.tinyui.schema.NodeScope
+import wang.harlon.tinyui.schema.Theme
 
 /** First batch of built-ins (docs/components.md §3); schemas come from schema/ via `tinyui schema`. */
 fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
@@ -70,9 +73,10 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
         val maxLines = scope.get<Double>("maxLines")?.toInt()?.takeIf { it > 0 } ?: Int.MAX_VALUE
         Text(
             text = scope["text"] ?: "",
-            color = scope["color"] ?: Color.Unspecified,
+            style = scope.get<String>("style")?.let { Theme.textStyle(MaterialTheme.typography, it) } ?: LocalTextStyle.current,
+            color = scope.color("color") ?: Color.Unspecified,
             fontSize = scope["fontSize"] ?: TextUnit.Unspecified,
-            fontWeight = when (scope.get<String>("fontWeight")) { "medium" -> FontWeight.Medium; "bold" -> FontWeight.Bold; else -> FontWeight.Normal },
+            fontWeight = when (scope.get<String>("fontWeight")) { "normal" -> FontWeight.Normal; "medium" -> FontWeight.Medium; "bold" -> FontWeight.Bold; else -> null },
             maxLines = maxLines,
             overflow = if (maxLines == Int.MAX_VALUE) TextOverflow.Clip else TextOverflow.Ellipsis,
             textAlign = when (scope.get<String>("align")) { "center" -> TextAlign.Center; "end" -> TextAlign.End; else -> TextAlign.Start },

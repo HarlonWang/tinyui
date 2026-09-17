@@ -51,10 +51,10 @@ sealed class PropSpec(val kind: String, val required: Boolean, val initial: Bool
         override fun convert(value: JsonPrimitive): Any? = value.takeUnless { it.isString }?.doubleOrNull?.sp
     }
 
-    /** `#RRGGBB` or `#AARRGGBB`. */
+    /** `#RRGGBB` / `#AARRGGBB`, or a theme token name (Theme.kt). */
     class ColorSpec(default: String?, required: Boolean = false, initial: Boolean = false) : PropSpec("color", required, initial) {
-        override val default: Color? = default?.let(::parseColor)
-        override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content?.let(::parseColor)
+        override val default: ColorValue? = default?.let(::parseColorValue)
+        override fun convert(value: JsonPrimitive): Any? = value.takeIf { it.isString }?.content?.let(::parseColorValue)
     }
 
     /** Stored as the enum name; the composable maps it. */
@@ -86,6 +86,10 @@ enum class FieldSpec {
         Bool -> !value.isString && value.booleanOrNull != null
     }
 }
+
+internal fun parseColorValue(text: String): ColorValue? =
+    if (text.startsWith("#")) parseColor(text)?.let { ColorValue.Literal(it) }
+    else text.takeIf(Theme::isColorToken)?.let { ColorValue.Token(it) }
 
 internal fun parseColor(text: String): Color? {
     if (!text.startsWith("#")) return null

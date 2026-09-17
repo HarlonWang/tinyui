@@ -17,7 +17,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -318,12 +317,13 @@ class PageHost(
         override fun dispatch(event: String, payload: String) = this@PageHost.dispatch(node.id, event, payload)
 
         /** docs/components.md §2: size → clip → background → gesture → padding. */
+        @Composable
         override fun modifier(clickable: Boolean): Modifier {
             var m: Modifier = Modifier
             when (val w = get<SizeValue>("width")) { is SizeValue.Fixed -> m = m.width(w.dp); SizeValue.Fill -> m = m.fillMaxWidth(); SizeValue.Wrap -> m = m.wrapContentWidth(); null -> {} }
             when (val h = get<SizeValue>("height")) { is SizeValue.Fixed -> m = m.height(h.dp); SizeValue.Fill -> m = m.fillMaxHeight(); SizeValue.Wrap -> m = m.wrapContentHeight(); null -> {} }
             get<Dp>("cornerRadius")?.let { m = m.clip(RoundedCornerShape(it)) }
-            get<Color>("background")?.let { m = m.background(it) }
+            color("background")?.let { m = m.background(it) }
             if (clickable && has("onClick")) m = m.clickable { dispatch("onClick") }
             get<Dp>("padding")?.let { m = m.padding(it) }
             return m

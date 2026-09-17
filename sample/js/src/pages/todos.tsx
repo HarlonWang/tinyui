@@ -41,7 +41,7 @@ export default function Todos() {
 
     return (
         <Column width="fill" height="fill" padding={16} gap={12}>
-            <Text text={`${state.todos.length} todos · ${state.todos.filter((t) => t.done).length} done`} fontSize={20} fontWeight="bold" />
+            <Text text={`${state.todos.length} todos · ${state.todos.filter((t) => t.done).length} done`} style="titleLarge" />
             <Show when={first()} fallback={() => <Text text={firstMeta.error() ? "failed to load" : "loading…"} />}>
                 {() => (
                     <Column width="fill" gap={12}>
@@ -63,8 +63,8 @@ export default function Todos() {
 
 function TodoRow(props: { todo: Todo; onRemove: () => void }) {
     return (
-        <Row width="fill" gap={8} align="center" justify="spaceBetween" padding={8} background={props.todo.done ? "#EEF7EE" : "#F4F4F4"} cornerRadius={8} onClick={() => { props.todo.done = !props.todo.done; }}>
-            <Text text={props.todo.title} color={props.todo.done ? "#888888" : "#222222"} />
+        <Row width="fill" gap={8} align="center" justify="spaceBetween" padding={8} background={props.todo.done ? "secondaryContainer" : "surfaceContainer"} cornerRadius={8} onClick={() => { props.todo.done = !props.todo.done; }}>
+            <Text text={props.todo.title} style="bodyLarge" color={props.todo.done ? "onSurfaceVariant" : "onSurface"} />
             <Button text="remove" variant="text" onClick={props.onRemove} />
         </Row>
     );

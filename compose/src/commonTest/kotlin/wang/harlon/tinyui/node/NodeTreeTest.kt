@@ -1,6 +1,7 @@
 package wang.harlon.tinyui.node
 
 import androidx.compose.ui.graphics.Color
+import wang.harlon.tinyui.schema.ColorValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import wang.harlon.tinyui.components.registerBuiltins
@@ -30,7 +31,7 @@ class NodeTreeTest {
     fun convertsPropsOnWriteAndRestoresDefaultsOnNull() {
         tree.apply("""[["c",1,"Text"],["p",1,"text","t"],["p",1,"color","#FF0000"],["p",1,"fontSize",18],["i",0,1,0]]""")
         val node = tree.node(1)!!
-        assertEquals(Color(0xFFFF0000), node.props["color"])
+        assertEquals(ColorValue.Literal(Color(0xFFFF0000)), node.props["color"])
         assertEquals(18.sp, node.props["fontSize"])
         tree.apply("""[["p",1,"color",null]]""")
         assertNull(node.props["color"], "null restores the schema default, which Text.color does not have")

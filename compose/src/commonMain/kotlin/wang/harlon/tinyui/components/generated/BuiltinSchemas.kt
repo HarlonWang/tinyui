@@ -56,9 +56,10 @@ object BuiltinSchemas {
         type = "Text",
         props = mapOf(
             "text" to PropSpec.Str(default = null, required = true, initial = false),
+            "style" to PropSpec.Enum(values = setOf("displayLarge", "displayMedium", "displaySmall", "headlineLarge", "headlineMedium", "headlineSmall", "titleLarge", "titleMedium", "titleSmall", "bodyLarge", "bodyMedium", "bodySmall", "labelLarge", "labelMedium", "labelSmall"), default = null, required = false, initial = false),
             "color" to PropSpec.ColorSpec(default = null, required = false, initial = false),
             "fontSize" to PropSpec.Sp(default = null, required = false, initial = false),
-            "fontWeight" to PropSpec.Enum(values = setOf("normal", "medium", "bold"), default = "normal", required = false, initial = false),
+            "fontWeight" to PropSpec.Enum(values = setOf("normal", "medium", "bold"), default = null, required = false, initial = false),
             "maxLines" to PropSpec.Num(default = 0.0, required = false, initial = false),
             "align" to PropSpec.Enum(values = setOf("start", "center", "end"), default = "start", required = false, initial = false),
         ),
@@ -137,4 +138,8 @@ object BuiltinSchemas {
     )
 
     val all: List<ComponentSchema> = listOf(Column, Row, Box, Text, Button, TextField, LazyColumn, Spacer)
+
+    /** Theme token names the schema DSL knows; Theme.kt must resolve each (checked by test). */
+    val colorTokens: Set<String> = setOf("primary", "onPrimary", "primaryContainer", "onPrimaryContainer", "inversePrimary", "secondary", "onSecondary", "secondaryContainer", "onSecondaryContainer", "tertiary", "onTertiary", "tertiaryContainer", "onTertiaryContainer", "background", "onBackground", "surface", "onSurface", "surfaceVariant", "onSurfaceVariant", "surfaceTint", "inverseSurface", "inverseOnSurface", "error", "onError", "errorContainer", "onErrorContainer", "outline", "outlineVariant", "scrim", "surfaceBright", "surfaceDim", "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest", "primaryFixed", "primaryFixedDim", "onPrimaryFixed", "onPrimaryFixedVariant", "secondaryFixed", "secondaryFixedDim", "onSecondaryFixed", "onSecondaryFixedVariant", "tertiaryFixed", "tertiaryFixedDim", "onTertiaryFixed", "onTertiaryFixedVariant")
+    val textStyles: Set<String> = setOf("displayLarge", "displayMedium", "displaySmall", "headlineLarge", "headlineMedium", "headlineSmall", "titleLarge", "titleMedium", "titleSmall", "bodyLarge", "bodyMedium", "bodySmall", "labelLarge", "labelMedium", "labelSmall")
 }

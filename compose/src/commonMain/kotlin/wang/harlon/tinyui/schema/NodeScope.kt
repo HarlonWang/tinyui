@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import wang.harlon.tinyui.node.Command
 import wang.harlon.tinyui.node.UINode
 
@@ -20,7 +21,12 @@ interface NodeScope {
     /** K2: fire and forget, on any thread. [payload] is the flat JSON object the event schema declares. */
     fun dispatch(event: String, payload: String = "{}")
 
+    /** A `color` prop with theme tokens resolved against the current MaterialTheme. */
+    @Composable
+    fun color(key: String): Color? = get<ColorValue>(key)?.resolve()
+
     /** Layout modifier from the common props; with [clickable] the click gesture is attached when `onClick` is registered. */
+    @Composable
     fun modifier(clickable: Boolean = true): Modifier
 
     @Composable

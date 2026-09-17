@@ -1,10 +1,14 @@
 package wang.harlon.tinyui.sample
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -78,10 +82,13 @@ fun App() {
             maps = SourceMaps(maps),
         )
     }
-    MaterialTheme {
-        Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
-            val b = bundle
-            if (b == null) Text("loading…") else TinyUIPage(b.runtime, b.page, registry, sink, services, sourceMaps = b.maps)
+    // pages name theme tokens only (docs/components.md §6); flipping the scheme here restyles them with no patch
+    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+        Surface(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().safeDrawingPadding(), contentAlignment = Alignment.Center) {
+                val b = bundle
+                if (b == null) Text("loading…") else TinyUIPage(b.runtime, b.page, registry, sink, services, sourceMaps = b.maps)
+            }
         }
     }
 }
