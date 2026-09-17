@@ -129,7 +129,7 @@ class PageHost(
                     check(protocol == PROTOCOL) { "protocol $protocol from the runtime module, host implements $PROTOCOL" }
                     namespace.use { ns ->
                         (ns.get("default", ObjectTransport.REF) as JsRef).use { default ->
-                            e.call("mount", default, JsValue.Str(propsJson), JsValue.Str(registry.manifest(CAPABILITIES)))
+                            e.call("mount", default, JsValue.Str(propsJson), JsValue.Str(registry.manifest(FrameworkCapabilities + services.capabilities.keys)))
                         }
                     }
                     e.call("flush")
@@ -253,24 +253,32 @@ class PageHost(
         val a = args(argsJson)
         when (name) {
             "timer.schedule" -> schedule(cbId, a)
-            "http.request" -> scope.launch {
-                try {
-                    val request = HttpRequest(
-                        method = a.str("method") ?: "GET",
-                        url = a.str("url") ?: throw HostException("E_INVALID", "http.request needs url"),
-                        headers = (a["headers"] as? JsonObject)?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap(),
-                        bodyJson = a["body"]?.toString(),
-                        timeoutMs = a["timeout"]?.jsonPrimitive?.longOrNull,
-                    )
-                    val response = services.http.request(request)
-                    resolve(cbId, buildJsonObject { put("status", response.status); put("body", Json.parseToJsonElement(response.bodyJson)) }.toString())
-                } catch (e: HostException) {
-                    reject(cbId, e.code, e.message ?: "")
-                } catch (e: Exception) {
-                    reject(cbId, "E_NET", e.message ?: e.toString())
-                }
+            "http.request" -> settle(cbId) {
+                val request = HttpRequest(
+                    method = a.str("method") ?: "GET",
+                    url = a.str("url") ?: throw HostException("E_INVALID", "http.request needs url"),
+                    headers = (a["headers"] as? JsonObject)?.mapValues { it.value.jsonPrimitive.content } ?: emptyMap(),
+                    bodyJson = a["body"]?.toString(),
+                    timeoutMs = a["timeout"]?.jsonPrimitive?.longOrNull,
+                )
+                val response = services.http.request(request)
+                buildJsonObject { put("status", response.status); put("body", Json.parseToJsonElement(response.bodyJson)) }.toString()
             }
-            else -> scope.launch { reject(cbId, "E_UNSUPPORTED", "$name is not available") }
+            else -> when (val capability = services.capabilities[name]) {
+                null -> scope.launch { reject(cbId, "E_UNSUPPORTED", "$name is not available") }
+                else -> settle(cbId) { capability.call(argsJson) ?: "" }
+            }
+        }
+    }
+
+    /** Runs one J3 on the page scope and answers with K3: the JSON [block] returns, or its E3 code. */
+    private fun settle(cbId: Int, block: suspend () -> String) = scope.launch {
+        try {
+            resolve(cbId, block())
+        } catch (e: HostException) {
+            reject(cbId, e.code, e.message ?: "")
+        } catch (e: Exception) {
+            reject(cbId, "E_NET", e.message ?: e.toString())
         }
     }
 
@@ -363,6 +371,5 @@ class PageHost(
         /** docs/patch-protocol.md §6 */
         const val PROTOCOL = 1
         private val ENTRY_NAMES = listOf("mount", "unmount", "visible", "dispatch", "resolve", "reject", "emit", "flush")
-        private val CAPABILITIES = listOf("device.info", "i18n.t", "config.get", "store.get", "store.set", "navigation.push", "navigation.pop", "events.emit", "http.request", "timer.schedule")
     }
 }

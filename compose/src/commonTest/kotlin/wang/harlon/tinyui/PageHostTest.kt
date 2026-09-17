@@ -24,7 +24,7 @@ class PageHostTest {
     }
 
     private val core = module("@tiny-ui/core", """
-        let patches = [], count = 0, handler = null, page = null, emits = 0;
+        let patches = [], count = 0, handler = null, page = null, emits = 0, settled = []; const settle = (line) => { settled.push(line); patches.push(["p",1,"text", settled.slice().sort().join(";")]); };
         globalThis.__tinyui = {
             protocol: 1,
             mount(p, props, host) {
@@ -34,8 +34,8 @@ class PageHostTest {
                 handler = () => { count++; patches.push(["p",1,"text","count " + count]); };
             },
             unmount() {}, visible() {},
-            resolve(cbId, json) { patches.push(["p",1,"text", cbId === 9 ? "http " + json : "timer " + cbId]); },
-            reject(cbId, json) { patches.push(["p",1,"text","rejected " + json]); },
+            resolve(cbId, json) { if (cbId >= 11) settle("ok " + cbId + " " + json); else patches.push(["p",1,"text", cbId === 9 ? "http " + json : "timer " + cbId]); },
+            reject(cbId, json) { if (cbId >= 11) settle("rejected " + cbId + " " + json); else patches.push(["p",1,"text","rejected " + json]); },
             dispatch(id, event, payloadJson) {
                 if (id === 2 && event === "onClick") handler();
                 if (event === "onTimer") __host_call("timer.schedule", 7, JSON.stringify({ ms: 10 }));
@@ -43,6 +43,7 @@ class PageHostTest {
                 if (event === "onReject") Promise.reject(new Error("nobody catches"));
                 if (event === "onQuery") patches.push(["p",1,"text", __host_query("store.get", JSON.stringify({ key: "cart" })) + "|" + __host_query("i18n.t", JSON.stringify({ key: "hi" })) + "|" + JSON.parse(__host_query("device.info", "{}")).os]);
                 if (event === "onHttp") __host_call("http.request", 9, JSON.stringify({ method: "GET", url: "/todos" }));
+                if (event === "onCapability") { __host_call("checkout.start", 11, JSON.stringify({ plan: "annual" })); __host_call("checkout.start", 12, JSON.stringify({ plan: "weekly" })); __host_call("nobody.home", 13, "{}"); }
                 if (event === "onSubscribe") { __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("store.subscribe", JSON.stringify({ key: "cart" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); __host_send("events.subscribe", JSON.stringify({ topic: "net" })); patches.push(["p",1,"text","subscribed"]); }
                 if (event === "onSet") __host_send("store.set", JSON.stringify({ key: "cart", value: payloadJson }));
             },
@@ -63,6 +64,11 @@ class PageHostTest {
             override suspend fun request(request: HttpRequest): HttpResponse =
                 if (request.url == "/todos") HttpResponse(200, """[{"id":1}]""") else throw HostException("E_HTTP", "404")
         },
+        capabilities = mapOf(
+            "checkout.start" to HostCapability { args ->
+                if (args.contains("annual")) """{"url":"https://pay"}""" else throw HostException("E_INVALID", "no such plan")
+            },
+        ),
     )
 
     private fun host(props: String = "{}", maps: SourceMaps = SourceMaps.EMPTY) =
@@ -88,7 +94,7 @@ class PageHostTest {
         val host = host("""{"name":"tinyui"}""")
         host.start()
         host.await { host.tree.root.children.isNotEmpty() }
-        assertEquals("hello tinyui / 8", host.tree.node(1)!!.props["text"])
+        assertEquals("hello tinyui / 9", host.tree.node(1)!!.props["text"])
         assertNull(host.failure)
         host.close()
     }
@@ -169,6 +175,12 @@ class PageHostTest {
         host.await { text() == """{"n":2}|"hello-hi"|${platformInfo()["os"]}""" }
         host.dispatch(2, "onHttp", "{}")
         host.await { text() == """http {"status":200,"body":[{"id":1}]}""" }
+        host.dispatch(2, "onCapability", "{}")
+        host.await { text()?.count { it == ';' } == 2 }
+        assertEquals(
+            """ok 11 {"url":"https://pay"};rejected 12 {"code":"E_INVALID","message":"no such plan"};rejected 13 {"code":"E_UNSUPPORTED","message":"nobody.home is not available"}""",
+            text(),
+        )
         host.dispatch(2, "onSubscribe", "{}")
         host.await { text() == "subscribed" }
         services.events.emit("net", """{"online":false}""")

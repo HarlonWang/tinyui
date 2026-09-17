@@ -78,3 +78,16 @@ J3 `http.request`，参数 `{ method, url, headers?, body?, timeout? }`；宿主
 | `onReachEnd` | 最后一行进入可见区时触发一次；列表长度变化后再武装 | `LazyColumnComponent` |
 | `onScrollEnd` | 滚动停止时触发，带首个可见行 index | 同上 |
 | `onProgress` 类节流 | 1 s | 首批组件没有，写在这里备查 |
+
+## 7. 宿主自定义能力：`host.call`
+
+定于 2026-09-17（TrendingAI 订阅页触发：下单、登录、埋点都是 App 自己的动作，不该进框架）。
+
+```ts
+const { url } = await host.call<{ url: string }>("checkout.start", { plan: "annual" });
+```
+
+J3，一个名字一个能力，Kotlin 侧 `HostServices(capabilities = mapOf("checkout.start" to HostCapability { argsJson -> … }))`：suspend，收 JS 传的对象（JSON 文本），返回 JSON 文本（`null` 即 `undefined`）；抛 `HostException` 走 E3 码，其他异常按 `E_NET`。没注册的名字拒绝 `E_UNSUPPORTED`。名字不强制前缀，但不能与框架自己的十个名字（§1–§5）重合，重合在构造 `HostServices` 时就报错。挂载清单的 `capabilities` 列出框架名 + 宿主名，页面可据此判断宿主是否提供某能力。
+
+不做 J4（火后不理）变体：不等 Promise 就是火后不理，省不下什么。能力的类型声明由宿主 JS 工程自己写一层封装（`ta.checkout.start(plan)`），框架不生成。
+

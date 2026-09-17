@@ -52,7 +52,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 不在首批的：`margin`（Compose 没有对应，用父容器的 `gap` / `padding`）、`alignSelf`（等需求）。
 
-## 3. 首批八个组件
+## 3. 内置组件
 
 `onClick` 所有容器和 `Text` 都有。事件的 payload 字段、命令的参数字段见 `schema/components/*.ts`，这里只列名字。
 
@@ -61,12 +61,13 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 | `Column` / `Row` | `gap`、`align`（交叉轴 start / center / end）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
 | `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick` | | |
-| `Button` | `text`（必填）、`enabled`、`variant`（filled / outlined / text） | `onClick` | | |
+| `Button` | `text`、`enabled`、`variant`（filled / outlined / text） | `onClick` | | 可选：有 children 就当标签渲染、忽略 `text`（按钮内放加载指示或图标；2026-09-17 加） |
+| `RadioButton` | `selected`（必填）、`enabled` | `onClick` | | |
 | `TextField` | `initialText`（initial）、`placeholder`、`singleLine`、`keyboard` | `onChange{text}`、`onCommit{text}`（IME Done 或失焦） | `setText{text}`、`focus`、`blur` | |
 | `LazyColumn` | `gap` | `onReachEnd`、`onScrollEnd{index}` | `scrollTo{index}` | 是，通常是一个 `<For>` |
 | `Spacer` | （只有布局 prop） | | | |
 
-`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
+`RadioButton` 的选中态是普通 prop（2026-09-17 加）：它只报点击，选中哪个由 JS 决定——单选组的真值本来就在页面状态里，不属于 ADR-004 的"高频交互状态"。`TextField` 的文本与光标永远在 Kotlin 侧（ADR-004 §3.3）：`setText` 会同时触发 `onChange`。`LazyColumn` 的行就是它的 children，虚拟化只在组合层（ADR-003 §3.6）。
 
 **`Image` 推迟**：牵出图片加载管线的选型（coil3 还是宿主提供 loader），M2 用不到，单独一次定。
 
