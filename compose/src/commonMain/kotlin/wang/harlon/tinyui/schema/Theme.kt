@@ -2,6 +2,7 @@ package wang.harlon.tinyui.schema
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -60,6 +61,18 @@ object Theme {
         "surfaceContainerHighest" -> scheme.surfaceContainerHighest
         "surfaceContainerLow" -> scheme.surfaceContainerLow
         "surfaceContainerLowest" -> scheme.surfaceContainerLowest
+        "primaryFixed" -> scheme.primaryFixed
+        "primaryFixedDim" -> scheme.primaryFixedDim
+        "onPrimaryFixed" -> scheme.onPrimaryFixed
+        "onPrimaryFixedVariant" -> scheme.onPrimaryFixedVariant
+        "secondaryFixed" -> scheme.secondaryFixed
+        "secondaryFixedDim" -> scheme.secondaryFixedDim
+        "onSecondaryFixed" -> scheme.onSecondaryFixed
+        "onSecondaryFixedVariant" -> scheme.onSecondaryFixedVariant
+        "tertiaryFixed" -> scheme.tertiaryFixed
+        "tertiaryFixedDim" -> scheme.tertiaryFixedDim
+        "onTertiaryFixed" -> scheme.onTertiaryFixed
+        "onTertiaryFixedVariant" -> scheme.onTertiaryFixedVariant
         else -> null
     }
 
@@ -82,15 +95,5 @@ object Theme {
         else -> null
     }
 
-    private val PROBE = ColorScheme(
-        primary = Color.Black, onPrimary = Color.Black, primaryContainer = Color.Black, onPrimaryContainer = Color.Black, inversePrimary = Color.Black,
-        secondary = Color.Black, onSecondary = Color.Black, secondaryContainer = Color.Black, onSecondaryContainer = Color.Black,
-        tertiary = Color.Black, onTertiary = Color.Black, tertiaryContainer = Color.Black, onTertiaryContainer = Color.Black,
-        background = Color.Black, onBackground = Color.Black, surface = Color.Black, onSurface = Color.Black,
-        surfaceVariant = Color.Black, onSurfaceVariant = Color.Black, surfaceTint = Color.Black, inverseSurface = Color.Black, inverseOnSurface = Color.Black,
-        error = Color.Black, onError = Color.Black, errorContainer = Color.Black, onErrorContainer = Color.Black,
-        outline = Color.Black, outlineVariant = Color.Black, scrim = Color.Black,
-        surfaceBright = Color.Black, surfaceDim = Color.Black, surfaceContainer = Color.Black, surfaceContainerHigh = Color.Black,
-        surfaceContainerHighest = Color.Black, surfaceContainerLow = Color.Black, surfaceContainerLowest = Color.Black,
-    )
+    private val PROBE = lightColorScheme()
 }

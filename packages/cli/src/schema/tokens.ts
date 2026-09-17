@@ -12,6 +12,9 @@ export const COLOR_TOKENS = [
     "outline", "outlineVariant", "scrim",
     "surfaceBright", "surfaceDim",
     "surfaceContainer", "surfaceContainerHigh", "surfaceContainerHighest", "surfaceContainerLow", "surfaceContainerLowest",
+    "primaryFixed", "primaryFixedDim", "onPrimaryFixed", "onPrimaryFixedVariant",
+    "secondaryFixed", "secondaryFixedDim", "onSecondaryFixed", "onSecondaryFixedVariant",
+    "tertiaryFixed", "tertiaryFixedDim", "onTertiaryFixed", "onTertiaryFixedVariant",
 ] as const;
 
 export const TEXT_STYLES = [

@@ -25,3 +25,6 @@ packages/*/dist/
 sample/iosApp/*.xcodeproj/xcuserdata/
 sample/iosApp/*.xcodeproj/project.xcworkspace/xcuserdata/
 DerivedData/
+
+# editor swap files
+*.swp
