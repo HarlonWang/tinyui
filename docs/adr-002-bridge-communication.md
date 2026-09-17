@@ -173,7 +173,7 @@ mquickjs-kmp 自身把 `ObjectTransport.JSON` 设为默认、ref 作为可选 fl
 | 子问题 | 结论 |
 |---|---|
 | 调用模型 | JS → K 五类（J1 patch / J2 同步查询白名单 / J3 异步能力含定时器 / J4 即发即忘 / J5 日志）；K → JS 五类（K0 加载 / K1 生命周期 / K2 事件 / K3 回送 / K5 推送）；J2 **保留 + 白名单**，业务模块不得注册同步宿主函数 |
-| 线程模型 | **B**：JS 跑 `JsRuntime` 默认单车道 dispatcher；K 入口 fire-and-forget；patch 由 JS 线程在 `withMutableSnapshot` 内直接写入节点表、主线程只重组（2026-09-15 由 ADR-003 修订，原为"经有序队列回主线程应用"，理由见 ADR-003 §3.2）；每次 K 入口带超时，超时走 interrupt；"UI 同步问 JS"一律改为 prop 预先声明 |
+| 线程模型 | **B**：JS 跑每页一条独占线程（2026-09-17 修订，原为 `JsRuntime` 默认的 `Dispatchers.Default` 单车道：共享池不绑定线程，一次 K 入口最长占池 5 s，K 入口延迟受池内其他任务影响；独占线程随页创建、随引擎关闭，线程数随返回栈深度增长的代价归入"返回栈深页引擎回收策略"一并处理；App 级单线程否掉，一页的长入口会阻塞其他页的挂载，与每页一引擎的隔离目的相悖）；K 入口 fire-and-forget；patch 由 JS 线程在 `withMutableSnapshot` 内直接写入节点表、主线程只重组（2026-09-15 由 ADR-003 修订，原为"经有序队列回主线程应用"，理由见 ADR-003 §3.2）；每次 K 入口带超时，超时走 interrupt；"UI 同步问 JS"一律改为 prop 预先声明 |
 | 事务边界 | 一次 K 入口 = 一个事务 = 一次 J1；不跨事务合并；大事务不拆 |
 | 引擎与页面 | **每页一个引擎**；Kotlin 侧每页一个作用域（引擎 + CoroutineScope + patch 队列 + NodeTree），unmount 一处收口 |
 | 跨界标识 | 节点 id JS 分配不回收；handler 不过桥；callback id JS 分配、定时器并入同一 id 空间 |

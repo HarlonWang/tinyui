@@ -20,13 +20,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -68,8 +71,10 @@ class PageFailure(val kind: String, val message: String)
 
 /**
  * One page: its engine, coroutine scope and node tree (docs/adr-002 §3.4). Every K entry is
- * `entry` + `flush` under one [JsRuntime.withEngine] (docs/js-runtime.html §2).
+ * `entry` + `flush` under one [JsRuntime.withEngine] (docs/js-runtime.html §2). JS runs on a thread
+ * owned by the page (docs/adr-002 §4), closed with the engine.
  */
+@OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class PageHost(
     private val runtimeBundle: RuntimeBundle,
     private val page: ByteArray,
@@ -88,7 +93,8 @@ class PageHost(
     private val timers = HashMap<Int, Job>()
     private val subscriptions = HashMap<String, AutoCloseable>()
     private val storeVersions = HashMap<String, Long>()
-    private val runtime = JsRuntime(JsEngineConfig(moduleScheme = MODULE_SCHEME, logger = sink::log))
+    private val jsThread = newSingleThreadContext("tinyui-page")
+    private val runtime = JsRuntime(JsEngineConfig(moduleScheme = MODULE_SCHEME, logger = sink::log), jsThread)
     private var entries: Entries? = null
 
     private class Entries(val self: JsRef, val fns: Map<String, JsRef>) {
@@ -171,6 +177,7 @@ class PageHost(
                 }
             } finally {
                 runtime.close()
+                jsThread.close()
             }
         }
     }
