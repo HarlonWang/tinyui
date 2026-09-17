@@ -118,10 +118,13 @@ class ComponentSchema(
 /** The common layout props; the order here is the Modifier order (docs/components.md §2). */
 object LayoutProps {
     val specs: Map<String, PropSpec> = linkedMapOf(
+        "weight" to PropSpec.Num(default = null),
         "width" to PropSpec.Size(default = null),
         "height" to PropSpec.Size(default = null),
         "cornerRadius" to PropSpec.Dp(default = null),
         "background" to PropSpec.ColorSpec(default = null),
+        "borderWidth" to PropSpec.Dp(default = null),
+        "borderColor" to PropSpec.ColorSpec(default = null),
         "padding" to PropSpec.Dp(default = null),
     )
 }

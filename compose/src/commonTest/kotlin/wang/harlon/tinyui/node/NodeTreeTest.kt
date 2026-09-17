@@ -32,6 +32,12 @@ class NodeTreeTest {
         tree.apply("""[["c",1,"Text"],["p",1,"text","t"],["p",1,"color","#FF0000"],["p",1,"fontSize",18],["i",0,1,0]]""")
         val node = tree.node(1)!!
         assertEquals(ColorValue.Literal(Color(0xFFFF0000)), node.props["color"])
+        tree.apply("""[["p",1,"weight",2],["p",1,"borderWidth",1.5],["p",1,"borderColor","outline"],["p",1,"scroll",true]]""")
+        assertEquals(2.0, node.props["weight"])
+        assertEquals(1.5.dp, node.props["borderWidth"])
+        assertEquals(ColorValue.Token("outline"), node.props["borderColor"])
+        assertEquals(1, problems.size, "scroll is not a Text prop: ${problems}")
+        problems.clear()
         assertEquals(18.sp, node.props["fontSize"])
         tree.apply("""[["p",1,"color",null]]""")
         assertNull(node.props["color"], "null restores the schema default, which Text.color does not have")

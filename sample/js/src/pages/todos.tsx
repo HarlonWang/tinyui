@@ -63,8 +63,8 @@ export default function Todos() {
 
 function TodoRow(props: { todo: Todo; onRemove: () => void }) {
     return (
-        <Row width="fill" gap={8} align="center" justify="spaceBetween" padding={8} background={props.todo.done ? "secondaryContainer" : "surfaceContainer"} cornerRadius={8} onClick={() => { props.todo.done = !props.todo.done; }}>
-            <Text text={props.todo.title} style="bodyLarge" color={props.todo.done ? "onSurfaceVariant" : "onSurface"} />
+        <Row width="fill" gap={8} align="center" padding={8} background={props.todo.done ? "secondaryContainer" : "surfaceContainer"} cornerRadius={8} borderWidth={props.todo.done ? 2 : 0} borderColor="primary" onClick={() => { props.todo.done = !props.todo.done; }}>
+            <Text text={props.todo.title} style="bodyLarge" color={props.todo.done ? "onSurfaceVariant" : "onSurface"} weight={1} />
             <Button text="remove" variant="text" onClick={props.onRemove} />
         </Row>
     );

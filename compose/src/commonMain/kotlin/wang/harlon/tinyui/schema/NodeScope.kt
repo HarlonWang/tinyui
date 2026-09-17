@@ -2,6 +2,7 @@ package wang.harlon.tinyui.schema
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,6 +33,10 @@ interface NodeScope {
     @Composable
     fun Children()
 
+    /** Renders the children with a parent-scoped modifier each (`weight` inside Row / Column); it goes outermost on the child. */
+    @Composable
+    fun Children(childModifier: (UINode) -> Modifier) = Children()
+
     /** Renders one child; for components that lay children out themselves (LazyColumn). */
     @Composable
     fun RenderChild(child: UINode)
@@ -49,3 +54,7 @@ fun NodeScope.Commands(handler: suspend (Command) -> Unit) {
         }
     }
 }
+
+/** What the parent wants on the child's outermost modifier; Row / Column set it per child, everyone else resets it. */
+internal val LocalChildModifier = compositionLocalOf<Modifier> { Modifier }
+

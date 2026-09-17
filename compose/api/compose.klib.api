@@ -51,6 +51,7 @@ abstract interface wang.harlon.tinyui.schema/NodeScope { // wang.harlon.tinyui.s
     abstract fun dispatch(kotlin/String, kotlin/String = ...) // wang.harlon.tinyui.schema/NodeScope.dispatch|dispatch(kotlin.String;kotlin.String){}[0]
     abstract fun has(kotlin/String): kotlin/Boolean // wang.harlon.tinyui.schema/NodeScope.has|has(kotlin.String){}[0]
     abstract fun modifier(kotlin/Boolean, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui/Modifier // wang.harlon.tinyui.schema/NodeScope.modifier|modifier(kotlin.Boolean;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
+    open fun Children(kotlin/Function1<wang.harlon.tinyui.node/UINode, androidx.compose.ui/Modifier>, androidx.compose.runtime/Composer?, kotlin/Int) // wang.harlon.tinyui.schema/NodeScope.Children|Children(kotlin.Function1<wang.harlon.tinyui.node.UINode,androidx.compose.ui.Modifier>;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
     open fun color(kotlin/String, androidx.compose.runtime/Composer?, kotlin/Int): androidx.compose.ui.graphics/Color? // wang.harlon.tinyui.schema/NodeScope.color|color(kotlin.String;androidx.compose.runtime.Composer?;kotlin.Int){}[0]
 
     final class ComposeDefaultImpls { // wang.harlon.tinyui.schema/NodeScope.ComposeDefaultImpls|null[0]

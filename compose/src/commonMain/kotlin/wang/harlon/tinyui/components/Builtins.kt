@@ -1,5 +1,6 @@
 package wang.harlon.tinyui.components
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -26,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -45,6 +49,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import wang.harlon.tinyui.components.generated.BuiltinSchemas
+import wang.harlon.tinyui.node.UINode
 import wang.harlon.tinyui.schema.Commands
 import wang.harlon.tinyui.schema.ComponentRegistry
 import wang.harlon.tinyui.schema.NodeScope
@@ -53,18 +58,20 @@ import wang.harlon.tinyui.schema.Theme
 /** First batch of built-ins (docs/components.md §3); schemas come from schema/ via `tinyui schema`. */
 fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.Column) { scope ->
+        val scroll = scope.get<Boolean>("scroll") == true
         Column(
-            modifier = scope.modifier(),
+            modifier = scope.modifier().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier),
             verticalArrangement = verticalArrangement(scope["justify"], scope["gap"]),
             horizontalAlignment = when (scope.get<String>("align")) { "center" -> Alignment.CenterHorizontally; "end" -> Alignment.End; else -> Alignment.Start },
-        ) { scope.Children() }
+        ) { scope.Children { child -> if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
     }
     register(BuiltinSchemas.Row) { scope ->
+        val scroll = scope.get<Boolean>("scroll") == true
         Row(
-            modifier = scope.modifier(),
+            modifier = scope.modifier().then(if (scroll) Modifier.horizontalScroll(rememberScrollState()) else Modifier),
             horizontalArrangement = horizontalArrangement(scope["justify"], scope["gap"]),
             verticalAlignment = when (scope.get<String>("align")) { "center" -> Alignment.CenterVertically; "end" -> Alignment.Bottom; else -> Alignment.Top },
-        ) { scope.Children() }
+        ) { scope.Children { child -> if (scroll) Modifier else weightOf(child)?.let { Modifier.weight(it) } ?: Modifier } }
     }
     register(BuiltinSchemas.Box) { scope ->
         Box(modifier = scope.modifier(), contentAlignment = boxAlignment(scope["align"])) { scope.Children() }
@@ -98,6 +105,9 @@ fun ComponentRegistry.registerBuiltins(): ComponentRegistry = apply {
     register(BuiltinSchemas.LazyColumn) { scope -> LazyColumnComponent(scope) }
     register(BuiltinSchemas.Spacer) { scope -> Spacer(scope.modifier()) }
 }
+
+// a scrolling axis is unbounded, so there is no remaining space to share: weight is ignored there rather than collapsing the child to 0
+private fun weightOf(child: UINode): Float? = (child.props["weight"] as? Double)?.toFloat()?.takeIf { it > 0f }
 
 private fun verticalArrangement(justify: String?, gap: Dp?): Arrangement.Vertical {
     val spaced = gap != null && gap > 0.dp

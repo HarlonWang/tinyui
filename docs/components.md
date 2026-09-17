@@ -34,19 +34,23 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 ## 2. 公共布局 prop 与 Modifier 顺序
 
-`layout: true` 的组件都接受这五个，运行时按下面的顺序合成 `Modifier`，从外到内：
+`layout: true` 的组件都接受这些，运行时按下面的顺序合成 `Modifier`，从外到内：
 
 | 顺序 | prop | 类型 | Modifier |
 |---|---|---|---|
+| 0 | `weight` | number | `weight(f)`，由父 `Row` / `Column` 施加（2026-09-17 加） |
 | 1 | `width` / `height` | size | `width(dp)` / `fillMaxWidth()` / `wrapContentWidth()` |
 | 2 | `cornerRadius` | dp | `clip(RoundedCornerShape)` |
 | 3 | `background` | color | `background(color)` |
+| 3.5 | `borderWidth` / `borderColor` | dp / color | `border(width, color, 同一个 shape)`；宽 0 即无边框（Compose 的 0.dp 是一像素 hairline，这里不沿用）；色缺省 `outline` token（2026-09-17 加） |
 | 4 | （有 `onClick` handler 时） | | `clickable { dispatch("onClick") }` |
 | 5 | `padding` | dp，四边同值 | `padding(dp)` |
 
-顺序固定：以后加 prop 只能插进这个序列，不能重排（重排会改变已有页面的视觉）。`padding` 在最里面，所以它是内容内边距；背景和点击区域包含它。
+顺序固定：以后加 prop 只能插进这个序列，不能重排（重排会改变已有页面的视觉）。`padding` 在最里面，所以它是内容内边距；背景、边框和点击区域包含它。
 
-不在首批的：`margin`（Compose 没有对应，用父容器的 `gap` / `padding`）、`weight`、`alignSelf`（要父作用域；`Row` / `Column` 里给 child 写 `width="fill"` 会吃掉后面的兄弟，需要按比例分配时等 `weight`）。
+`weight` 需要父作用域：`Row` / `Column` 渲染 children 时按每个 child 的 `weight` 造 `Modifier.weight` 经 CompositionLocal 交给它，child 的 `modifier()` 把它放在最外层；其他容器把这个 local 重置为空，所以写在 `Box` / `LazyColumn` 的直接 child 上不生效、也不报错；`scroll` 开着的 `Column` / `Row` 主轴无界、没有剩余空间可分，其 child 的 `weight` 同样忽略（否则 Compose 会把它压成 0）。
+
+不在首批的：`margin`（Compose 没有对应，用父容器的 `gap` / `padding`）、`alignSelf`（等需求）。
 
 ## 3. 首批八个组件
 
@@ -54,7 +58,7 @@ prop 类型：`string` / `number` / `boolean` / `dp` / `sp` / `color`（`#RRGGBB
 
 | 组件 | prop | 事件 | 命令 | children |
 |---|---|---|---|---|
-| `Column` / `Row` | `gap`、`align`（交叉轴 start / center / end）、`justify`（主轴 start / center / end / spaceBetween） | `onClick` | | 是 |
+| `Column` / `Row` | `gap`、`align`（交叉轴 start / center / end）、`justify`（主轴 start / center / end / spaceBetween）、`scroll`（沿主轴滚动；`padding` 在滚动内容之外，不随内容滚） | `onClick` | | 是 |
 | `Box` | `align`（九宫格） | `onClick` | | 是 |
 | `Text` | `text`（必填）、`style`（M3 文字样式名，§6）、`color`、`fontSize`、`fontWeight`（normal / medium / bold；设了就覆盖 `style` 的对应字段，不设则跟 `style`）、`maxLines`（0 = 不限，超出省略号）、`align` | `onClick` | | |
 | `Button` | `text`（必填）、`enabled`、`variant`（filled / outlined / text） | `onClick` | | |
