@@ -126,6 +126,8 @@ object LayoutProps {
         "borderWidth" to PropSpec.Dp(default = null),
         "borderColor" to PropSpec.ColorSpec(default = null),
         "padding" to PropSpec.Dp(default = null),
+        "paddingHorizontal" to PropSpec.Dp(default = null),
+        "paddingVertical" to PropSpec.Dp(default = null),
     )
 }
 
