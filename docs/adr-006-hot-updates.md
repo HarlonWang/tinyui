@@ -99,7 +99,7 @@ HTTPS + manifest 里逐文件 sha256。签名（ed25519 / 内置公钥，Expo �
 
 ### 4.1 应用商店政策
 
-App Store Review Guidelines 2.5.2 只豁免由 WebKit / JavaScriptCore 执行的下载代码，QuickJS 不在名单里。React Native + Hermes 的 CodePush、字节的 Lynx 实践上未被拦，但这是"事实容忍"不是"规则允许"。F-Droid 收录政策对运行时下载并执行代码有限制（原文措辞待核对）。因此热下发做成**构建变体开关**：不含 `tinyui-updates` 的变体只用内置包，代码路径完全不存在；TrendingAI 的 F-Droid 变体关闭。
+App Store Review Guidelines 2.5.2 只豁免由 WebKit / JavaScriptCore 执行的下载代码，QuickJS 不在名单里。React Native + Hermes 的 CodePush、字节的 Lynx 实践上未被拦，但这是"事实容忍"不是"规则允许"。F-Droid 收录政策对运行时下载并执行代码有限制（原文措辞待核对）。因此热下发做成**构建变体开关**：不含 `tinyui-updates` 的变体只用内置包，代码路径完全不存在。
 
 ### 4.2 首个落点：TrendingAI
 
