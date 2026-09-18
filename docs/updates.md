@@ -132,7 +132,30 @@ class Updates(
 | `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`、`message` |
 | `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
 
-`Running.source` 是采用率的分子，`Skipped.mismatch` 与 `Failed.stage` 是失败归因的维度，`RolledBack` 的四个字段够对回 source map；这些在库里定形，将来上报到哪里是宿主的事。
+这些字段由下面的遥测产品功能倒推而来；事件在库里定形，上报到哪里（宿主埋点、更新服务的控制台）是宿主的事。
+
+**遥测产品功能**（控制台按发布者的工作流排；"投递日志"指服务端对两种 GET 的计数）：
+
+| 阶段 | 功能 | 看什么 | 数据 | 分期 |
+|---|---|---|---|---|
+| 发布后观察 | 采用曲线 | 每个 release 跑它的活跃设备占比随时间变化，多条叠看新版吃掉旧版 | `Running` 按 (version, day) 去重计数 | MVP |
+| | 版本分布 | 此刻活跃设备各跑哪个 version、多少还在内置包 | `Running` 快照 | MVP |
+| | 安装漏斗 | check → 中签 → 下载 → 校验 → 安装 → 生效，每级掉多少 | `Skipped(ROLLOUT)`、`Failed(DOWNLOAD / INTEGRITY)`、`Installed`、`Running` | MVP |
+| | 下载量对照 | 服务端数到的 `<version>/` 下载次数 vs 客户端上报的 `Installed`，对不上即上报链路或 CDN 有问题 | 投递日志 + `Installed` | 二期 |
+| 灰度决策 | 灰度命中率 | 中签比例是否贴近 `rollout`，偏离即宿主 `installId` 有问题 | `Skipped(ROLLOUT)` vs `Installed` | MVP |
+| | 灰度期健康对比 | 灰度人群与内置包人群的回退率、失败率对比，决定推 100% 还是回滚 | `RolledBack`、`Failed` 按 version 分组 | MVP |
+| | 拨杆就地操作 | 曲线旁直接改 `rollout` 或回滚指针（§6.2 的 UI 版） | 发布协议 | MVP |
+| 止血 | 回退率告警 | `RolledBack / Installed` 超阈值即通知（webhook / 邮件） | `RolledBack`、`Installed` | 二期 |
+| | 自动止血 | 超阈值自动把 rollout 拨 0 或指针退回上一个好版本，按 app 开关与阈值 | 同上 + 发布协议 | 二期 |
+| | 失败原因分布 | `Failed` 按 stage、`Skipped` 按 reason 分布——发错目录、公钥没换、CDN 缓存坏各有各的形状 | `Failed.stage`、`Skipped.reason` | MVP |
+| 排障 | 回退关联的页面错误 | `RolledBack` 的 kind / page / buildId 聚合，可对回 source map | `RolledBack` | 二期 |
+| | 兼容性错配 | 各不匹配项各多少台；App 新版发出后旧 rv 还剩多少活跃设备，决定何时停发旧 rv | `Skipped.mismatch` | 二期 |
+| | 按租户标识查询 | 租户在上报里自带用户 / 设备标识时，查该标识最近跑什么版本、有没有回退 | 上报里的 opaque 字段，服务端只存不解释 | 按需 |
+| 健康巡检 | runtimeVersion 存量 | 每个 rv 还有多少活跃设备，哪些 rv 可停止维护 | `Running` 按 rv | 按需 |
+| | 内置包占比 | 长期跑内置包的比例，高了说明 `check()` 没被调用或更新服务被网络策略挡了 | `Running.source` | 按需 |
+| | 上报健康 | 遥测事件量与投递日志的比值 | 两者 | 按需 |
+
+不在遥测范围内：页面级性能与业务埋点（宿主埋点的事，遥测只关心包的生命周期）；逐设备实时状态与远程操作（与"投递请求不带设备信息、客户端掷骰"相冲）。
 
 ### 4.3 `check()` 状态机
 
