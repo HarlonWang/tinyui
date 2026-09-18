@@ -65,7 +65,7 @@
 1. **A 立项骨架**——先 quickjs-kmp（M1～M3），再 TinyUI 构建链，否则 B、C 都没有落点
 2. **B 前三项并行**——半天到一天的实验，结果决定 C 里几个数值和 ADR-003 的退路
 3. **C 前三项定稿**（运行时 API、patch 协议、schema DSL）——两侧代码的契约，定了才能分头写
-4. ~~**M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干~~ 已完成（PR #3，2026-09-16）：`tinyui-core` 运行时（30 测试）、CLI JSX 变换（19 测试）、compose 节点表 / schema DSL / 注册表 / `PageHost` / `TinyUIPage`（9 测试），Counter 在 Android 与 iOS 模拟器上跑通。顺带修了 quickjs-kmp 的字节码注册入口不刷新栈顶的 bug（quickjs-kmp PR #12），**真机需要 quickjs-kmp ≥ 0.1.1**，发版后 bump catalog
+4. ~~**M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干~~ 已完成（PR #3，2026-09-16）：`tinyui-core` 运行时（30 测试）、CLI JSX 变换（19 测试）、compose 节点表 / schema DSL / 注册表 / `PageHost` / `TinyUIPage`（9 测试），Counter 在 Android 与 iOS 模拟器上跑通。顺带修了 quickjs-kmp 的字节码注册入口不刷新栈顶的 bug（quickjs-kmp PR #12），真机需要 quickjs-kmp ≥ 0.1.1（2026-09-18 已发并 bump catalog）
 5. ~~**C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入~~ 已完成（PR #4，2026-09-16）：schema 生成链、八个内置组件、`HostServices`、`tinyui-native`；todos 页在 Android 与 iOS 模拟器上跑通输入提交、行增删改、命令滚动、分页
-6. **实战接入：TrendingAI 订阅页**（2026-09-17 起，代替多页业务样例）——页面源码在 `~/TrendingProjects/trendingai-tinyui`，产物经 `pnpm sync` 入 TrendingAI；框架缺什么以这一页为准补（第一批：主题 token、weight / border / scroll、`host.call`、`Button` children、`RadioButton`、宿主 include）。已在 Android 模拟器跑通拉价、选档、深浅色（TrendingAI 分支 `feat/tinyui-subscription`）；合入 TrendingAI main 的前提是 tinyui 0.1.0（Maven + npm）与 quickjs-kmp 0.1.1 发版
+6. **实战接入：TrendingAI 订阅页**（2026-09-17 起，代替多页业务样例）——页面源码在 `~/TrendingProjects/trendingai-tinyui`，产物经 `pnpm sync` 入 TrendingAI；框架缺什么以这一页为准补（第一批：主题 token、weight / border / scroll、`host.call`、`Button` children、`RadioButton`、宿主 include）。已在 Android 模拟器跑通拉价、选档、深浅色（TrendingAI 分支 `feat/tinyui-subscription`）；合入 TrendingAI main 的前提——tinyui 0.1.0（Maven + npm 三包 `tinyui-core` / `tinyui-native` / `tinyui-cli`）与 quickjs-kmp 0.1.1——已于 2026-09-18 发出（PR #11）；iOS 模拟器 smoke 通过，三条状态验证（结账失败 / 未登录 / 已是 Pro）不做
 
