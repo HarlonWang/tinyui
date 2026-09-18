@@ -55,7 +55,7 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 
 ### 2.4 库的边界
 
-库做校验、落盘、选择、回退；不做网络（收宿主的 `fetch(path)`）、不做调度（宿主决定何时 `check()`）、不做 UI（没有"有更新"弹窗）。放独立 artifact `wang.harlon:tinyui-updates`：core 库保持零 I/O、零文件依赖；不想要热下发的构建变体（见 §4.1）直接不依赖它。
+库做校验、落盘、选择、回退；不做网络（收宿主的 `fetch(path)`）、不做调度（宿主决定何时 `check()`）、不做 UI（没有"有更新"弹窗）。放独立 artifact `wang.harlon:tinyui-updates`：core 库保持零 I/O、零文件依赖；不需要热下发的宿主直接不依赖它。
 
 ### 2.5 服务端形态
 
@@ -99,7 +99,7 @@ HTTPS + manifest 里逐文件 sha256。签名（ed25519 / 内置公钥，Expo �
 
 ### 4.1 应用商店政策
 
-App Store Review Guidelines 2.5.2 只豁免由 WebKit / JavaScriptCore 执行的下载代码，QuickJS 不在名单里。React Native + Hermes 的 CodePush、字节的 Lynx 实践上未被拦，但这是"事实容忍"不是"规则允许"。F-Droid 收录政策对运行时下载并执行代码有限制（原文措辞待核对）。因此热下发做成**构建变体开关**：不含 `tinyui-updates` 的变体只用内置包，代码路径完全不存在。
+App Store Review Guidelines 2.5.2 只豁免由 WebKit / JavaScriptCore 执行的下载代码，QuickJS 不在名单里。React Native + Hermes 的 CodePush、字节的 Lynx 实践上未被拦，但这是"事实容忍"不是"规则允许"。F-Droid 收录政策对运行时下载并执行代码有限制（原文措辞待核对）。
 
 ### 4.2 首个落点：TrendingAI
 
