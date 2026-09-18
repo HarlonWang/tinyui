@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+*'
-  workflow_dispatch:   # npm job dry run only (no Maven, no release)
+  workflow_dispatch:   # npm job --dry-run only: preview what a tag push would publish (no Maven, no release)
 
 jobs:
   maven:
@@ -71,4 +71,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test
-      - run: pnpm publish -r --access public --no-git-checks ${{ github.event_name == 'workflow_dispatch' && '--dry-run --force' || '' }}
+      - run: pnpm publish -r --access public --no-git-checks ${{ github.event_name == 'workflow_dispatch' && '--dry-run' || '' }}
