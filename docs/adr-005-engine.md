@@ -76,7 +76,7 @@ Lynx、Kuikly、Weex 2 三个头部动态化框架独立选择了 QuickJS（或�
 | 错误分类调整（复盘 ADR-002） | 新增 E7 未处理 Promise rejection；E6 增加栈溢出 |
 | source map | CLI 输出 source map，E1 / E2 上报的行列号映射回 TSX 源；ES5 降级时代不可行，现在只是转译 |
 | 模块名 | 即说明符：`tinyui-core`、`pages/home`，无后缀无路径前缀；`import.meta.url` 为 `tinyui:pages/home` |
-| 热下发 | **不在本期**；本期字节码全部内置 App。Kotlin 回调式 loader（动态取源码）留给热下发那一期 |
+| 热下发 | **不在本期**；本期字节码全部内置 App。Kotlin 回调式 loader（动态取源码）留给热下发那一期（2026-09-18 修订：热下发已定，见 [ADR-006](./adr-006-hot-updates.md)；loader 不接入，页面级分发在宿主侧） |
 | mquickjs-kmp | 独立 SDK 继续存在，与 TinyUI 无关；不做"低端档位"抽象 |
 
 ## 5. 后果与遗留

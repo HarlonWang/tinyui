@@ -23,7 +23,7 @@ tinyui-native 同上（对它而言 tinyui-core 是 external）
 | esbuild | TS 类型擦除；JSX → `h()`（`jsxFactory: "h"`，`inject` 一个内存模块自动引入 `h` / `Fragment`，页面不手写）；业务内部相对 import 合并进页面模块；`tinyui-core` / `tinyui-native` 在插件 `onResolve` 里标 `external` + `sideEffects: false`，保持裸说明符且未用到时整条 import 被去掉；`format: "esm"`，`target: "esnext"`；输出 source map | 任何语法降级；对运行时模块的解析 |
 | qjsc-kmp | 源码模块 → 字节码，`-n` 给定模块名，`--strip-source` 保留行号去源码 | 校验模块图（引擎加载时查表） |
 
-**页面名即模块名**：`src/pages/home.tsx` → `pages/home`，子目录保留路径，无后缀无前缀（ADR-005 §4）。运行时模块名固定 `tinyui-core`、`tinyui-native`，产物文件是 `runtime/core`、`runtime/native`。产物目录 `runtime/*.bin`、`pages/**/*.bin`、`manifest.json`（页面与运行时模块清单、每个模块的产物路径 `files` 与 `buildIds`；Kotlin 侧路由表的来源，宿主用 `BuildManifest.file(name)` 定位 `.bin` / `.js.map`，见 [app-model.md](./app-model.md)）。
+**页面名即模块名**：`src/pages/home.tsx` → `pages/home`，子目录保留路径，无后缀无前缀（ADR-005 §4）。运行时模块名固定 `tinyui-core`、`tinyui-native`，产物文件是 `runtime/core`、`runtime/native`。产物目录 `runtime/*.bin`、`pages/**/*.bin`、`manifest.json`（页面与运行时模块清单、每个模块的产物路径 `files` 与 `buildIds`，热下发用的 `version` / `createdAt` / `engine` / `protocol` / `hashes` 见 [updates.md](./updates.md) §1.1；Kotlin 侧路由表的来源，宿主用 `BuildManifest.file(name)` 定位 `.bin` / `.js.map`，见 [app-model.md](./app-model.md)）。
 
 业务工程的 tsconfig 用 `jsx: "react-jsx"` + `jsxImportSource: "tinyui-core"` 做类型检查（[jsx-transform.md](./jsx-transform.md) §4），而 esbuild 会读到这份 tsconfig 并按它产出 `import { jsx } from "tinyui-core/jsx-runtime"`，即使 `build()` 显式传了 `jsx: "transform"`；引擎里没有这个模块，加载报 `module 'tinyui-core/jsx-runtime' is not registered`（2026-09-16 CI 实测）。页面构建要传 `tsconfigRaw` 覆盖 tsconfig 的 jsx 三项。
 
