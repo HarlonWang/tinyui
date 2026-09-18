@@ -27,7 +27,7 @@ build-logic/ Gradle convention plugins
 - Kotlin：`implementation("wang.harlon:tinyui:<version>")`（Maven Central；自带 `wang.harlon:quickjs-kmp`）
 - JS：`pnpm add tinyui-core tinyui-native` 与 `pnpm add -D tinyui-cli`，三包同版本号；`tinyui build` 另需 quickjs-kmp 的宿主工具 `qjsc-kmp`（见下）
 
-版本号与 git tag 一致（`0.1.0`），Maven 与 npm 三包同号同 tag 发。
+版本号与 git tag 一致（`0.1.0`），Maven 与 npm 三包同号同 tag 发：推 tag 触发 `publish.yml`，Maven 走 Sonatype，npm 走 trusted publishing（OIDC，无 token）。
 
 ## 构建
 

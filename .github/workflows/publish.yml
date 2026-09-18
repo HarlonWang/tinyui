@@ -4,10 +4,11 @@ on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+*'
+  workflow_dispatch:   # npm job dry run only (no Maven, no release)
 
-# Maven only; the npm packages are published from a maintainer's machine (README「安装」)
 jobs:
   maven:
+    if: github.event_name == 'push'
     runs-on: macos-15
     timeout-minutes: 60
     permissions:
@@ -44,3 +45,30 @@ jobs:
       - run: gh release create "$GITHUB_REF_NAME" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # npm trusted publishing (OIDC): no token, provenance attached. Each package's Trusted Publisher
+  # on npmjs.com is bound to this workflow's filename, so renaming publish.yml breaks it.
+  npm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24   # bundles npm >= 11.5.1, required for OIDC
+          cache: pnpm
+      - name: Tag must equal package versions
+        if: github.event_name == 'push'
+        run: |
+          for pkg in core native cli; do
+            v=$(node -p "require('./packages/$pkg/package.json').version")
+            [ "$v" = "$GITHUB_REF_NAME" ] || { echo "packages/$pkg is $v, tag is $GITHUB_REF_NAME"; exit 1; }
+          done
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+      - run: pnpm publish -r --access public --no-git-checks ${{ github.event_name == 'workflow_dispatch' && '--dry-run' || '' }}
