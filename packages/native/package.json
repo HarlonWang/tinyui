@@ -1,6 +1,6 @@
 {
-  "name": "@tiny-ui/native",
-  "version": "0.0.0",
+  "name": "tinyui-native",
+  "version": "0.1.0",
   "description": "TinyUI host capability API for business code: http, storage, toast, navigation, i18n.",
   "license": "MIT",
   "type": "module",
@@ -25,7 +25,7 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "@tiny-ui/core": "workspace:*"
+    "tinyui-core": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "latest"

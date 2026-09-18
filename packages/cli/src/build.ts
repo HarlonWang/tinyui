@@ -5,7 +5,8 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { compileModule, findQjsc } from "./qjsc.ts";
 import { TransformError, transformJsx } from "./transform.ts";
 
-export const RUNTIME_MODULES = ["@tiny-ui/core", "@tiny-ui/native"] as const;
+/** Runtime module name as the engine sees it → output file under `runtime/`. */
+export const RUNTIME_MODULES = { "tinyui-core": "core", "tinyui-native": "native" } as const;
 
 export interface BuildOptions {
     /** Project root: pages are discovered under `<root>/src/pages`, packages resolved from `<root>/node_modules`. */
@@ -19,7 +20,7 @@ export interface BuildOptions {
 }
 
 export interface BuiltModule {
-    /** Module name as the engine sees it: `pages/home`, `@tiny-ui/core`. */
+    /** Module name as the engine sees it: `pages/home`, `tinyui-core`. */
     name: string;
     js: string;
     map: string;
@@ -37,6 +38,8 @@ export interface BuildResult {
 export interface Manifest {
     runtime: string[];
     pages: string[];
+    /** Module name → output path without extension (`runtime/core`, `pages/home`); hosts locate `.bin` / `.js.map` through it. */
+    files: Record<string, string>;
     buildIds: Record<string, string>;
 }
 
@@ -72,6 +75,7 @@ export async function build(options: BuildOptions): Promise<BuildResult> {
     const content: Manifest = {
         runtime: runtime.map((m) => m.name),
         pages: pages.map((m) => m.name),
+        files: Object.fromEntries([...runtime, ...pages].map((m) => [m.name, relative(out, m.js).replace(/\.js$/, "").split(sep).join("/")])),
         buildIds: Object.fromEntries([...runtime, ...pages].map((m) => [m.name, m.buildId])),
     };
     await writeFile(manifest, JSON.stringify(content, null, 2) + "\n");
@@ -99,14 +103,14 @@ async function discoverPages(pagesDir: string): Promise<Map<string, string>> {
 
 async function bundleRuntime(root: string, out: string): Promise<BuiltModule[]> {
     const built: BuiltModule[] = [];
-    for (const name of RUNTIME_MODULES) {
-        const outfile = join(out, "runtime", name.replace("@tiny-ui/", "") + ".js");
+    for (const [name, file] of Object.entries(RUNTIME_MODULES)) {
+        const outfile = join(out, "runtime", file + ".js");
         await mkdir(dirname(outfile), { recursive: true });
         await esbuild({
             ...common(root),
             entryPoints: [name],
             outfile,
-            external: RUNTIME_MODULES.filter((m) => m !== name),
+            external: Object.keys(RUNTIME_MODULES).filter((m) => m !== name),
         });
         built.push({ name, js: outfile, map: outfile + ".map", buildId: "" });
     }
@@ -154,9 +158,9 @@ const pagePlugin: Plugin = {
     setup(api) {
         api.onResolve({ filter: /^tinyui:jsx-shim$/ }, (args) => ({ path: args.path, namespace: "tinyui" }));
         // Runtime modules stay bare specifiers and are pure, so a page that never uses JSX keeps no import of h
-        api.onResolve({ filter: /^@tiny-ui\// }, (args) => ({ path: args.path, external: true, sideEffects: false }));
+        api.onResolve({ filter: /^tinyui-(core|native)$/ }, (args) => ({ path: args.path, external: true, sideEffects: false }));
         api.onLoad({ filter: /.*/, namespace: "tinyui" }, () => ({
-            contents: 'export { h, Fragment, thunk } from "@tiny-ui/core";',
+            contents: 'export { h, Fragment, thunk } from "tinyui-core";',
             loader: "js",
         }));
         // docs/jsx-transform.md: wrap dynamic attributes before esbuild turns JSX into h()

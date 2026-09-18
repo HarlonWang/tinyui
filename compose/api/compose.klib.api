@@ -231,16 +231,19 @@ final class wang.harlon.tinyui.schema/ComponentSchema { // wang.harlon.tinyui.sc
 }
 
 final class wang.harlon.tinyui/BuildManifest { // wang.harlon.tinyui/BuildManifest|null[0]
-    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>) // wang.harlon.tinyui/BuildManifest.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
+    constructor <init>(kotlin.collections/List<kotlin/String>, kotlin.collections/List<kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>, kotlin.collections/Map<kotlin/String, kotlin/String>) // wang.harlon.tinyui/BuildManifest.<init>|<init>(kotlin.collections.List<kotlin.String>;kotlin.collections.List<kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>;kotlin.collections.Map<kotlin.String,kotlin.String>){}[0]
 
     final val buildIds // wang.harlon.tinyui/BuildManifest.buildIds|{}buildIds[0]
         final fun <get-buildIds>(): kotlin.collections/Map<kotlin/String, kotlin/String> // wang.harlon.tinyui/BuildManifest.buildIds.<get-buildIds>|<get-buildIds>(){}[0]
+    final val files // wang.harlon.tinyui/BuildManifest.files|{}files[0]
+        final fun <get-files>(): kotlin.collections/Map<kotlin/String, kotlin/String> // wang.harlon.tinyui/BuildManifest.files.<get-files>|<get-files>(){}[0]
     final val pages // wang.harlon.tinyui/BuildManifest.pages|{}pages[0]
         final fun <get-pages>(): kotlin.collections/List<kotlin/String> // wang.harlon.tinyui/BuildManifest.pages.<get-pages>|<get-pages>(){}[0]
     final val runtime // wang.harlon.tinyui/BuildManifest.runtime|{}runtime[0]
         final fun <get-runtime>(): kotlin.collections/List<kotlin/String> // wang.harlon.tinyui/BuildManifest.runtime.<get-runtime>|<get-runtime>(){}[0]
 
     final fun buildId(kotlin/String): kotlin/String // wang.harlon.tinyui/BuildManifest.buildId|buildId(kotlin.String){}[0]
+    final fun file(kotlin/String): kotlin/String // wang.harlon.tinyui/BuildManifest.file|file(kotlin.String){}[0]
 
     final object Companion { // wang.harlon.tinyui/BuildManifest.Companion|null[0]
         final fun parse(kotlin/String): wang.harlon.tinyui/BuildManifest // wang.harlon.tinyui/BuildManifest.Companion.parse|parse(kotlin.String){}[0]

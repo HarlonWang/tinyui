@@ -1,6 +1,6 @@
 {
-  "name": "@tiny-ui/core",
-  "version": "0.0.0",
+  "name": "tinyui-core",
+  "version": "0.1.0",
   "description": "TinyUI runtime: signals, ownership, h/For/Show, patch emission.",
   "license": "MIT",
   "type": "module",

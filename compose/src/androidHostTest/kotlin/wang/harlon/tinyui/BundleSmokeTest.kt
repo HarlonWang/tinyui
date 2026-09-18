@@ -24,9 +24,9 @@ class BundleSmokeTest {
         if (!out.isDirectory) return
         JsEngine(JsEngineConfig(moduleScheme = PageHost.MODULE_SCHEME)).use { engine ->
             for (fn in listOf("__host_apply", "__host_query", "__host_call", "__host_send", "__host_report")) engine.registerFunction(fn) { JsValue.Undefined }
-            assertEquals("@tiny-ui/core", engine.registerModule(out.resolve("runtime/core.bin").readBytes()))
-            assertEquals("@tiny-ui/native", engine.registerModule(out.resolve("runtime/native.bin").readBytes()))
-            engine.evaluateModule("import \"@tiny-ui/core\"; export const p = globalThis.__tinyui.protocol;").use {
+            assertEquals("tinyui-core", engine.registerModule(out.resolve("runtime/core.bin").readBytes()))
+            assertEquals("tinyui-native", engine.registerModule(out.resolve("runtime/native.bin").readBytes()))
+            engine.evaluateModule("import \"tinyui-core\"; export const p = globalThis.__tinyui.protocol;").use {
                 assertEquals(JsValue.Num(PageHost.PROTOCOL), it.get("p"))
             }
             engine.runBytecode(out.resolve("pages/counter.bin").readBytes()).let { if (it is AutoCloseable) it.close() }
@@ -38,7 +38,7 @@ class BundleSmokeTest {
     fun stacksFromABuiltPageMapBackToTheSource() = runBlocking {
         if (!out.isDirectory) return@runBlocking
         val manifest = BuildManifest.parse(out.resolve("manifest.json").readText())
-        val maps = SourceMaps(mapOf("pages/todos" to out.resolve("pages/todos.js.map").readText(), "@tiny-ui/core" to out.resolve("runtime/core.js.map").readText()))
+        val maps = SourceMaps(mapOf("pages/todos" to out.resolve("pages/todos.js.map").readText(), "tinyui-core" to out.resolve("runtime/core.js.map").readText()))
         val errors = mutableListOf<PageError>()
         val sink = object : PageSink {
             override fun error(error: PageError) { errors += error }

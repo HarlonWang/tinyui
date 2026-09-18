@@ -6,7 +6,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 /**
- * The `.js.map` files `tinyui build` wrote, keyed by module name (`pages/todos`, `@tiny-ui/core`), parsed on first use.
+ * The `.js.map` files `tinyui build` wrote, keyed by module name (`pages/todos`, `tinyui-core`), parsed on first use.
  * Ship them in debug builds only (docs/build-chain.md); release stacks are mapped offline with the build id.
  */
 class SourceMaps(maps: Map<String, String>) {

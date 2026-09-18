@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
-/** Drives PageHost with a hand-written stand-in for `@tiny-ui/core`: the K/J entry shapes, not the real runtime. */
+/** Drives PageHost with a hand-written stand-in for `tinyui-core`: the K/J entry shapes, not the real runtime. */
 class PageHostTest {
     private val log = mutableListOf<String>()
     private val errors = mutableListOf<PageError>()
@@ -23,7 +23,7 @@ class PageHostTest {
         override fun log(line: String) { log += line }
     }
 
-    private val core = module("@tiny-ui/core", """
+    private val core = module("tinyui-core", """
         let patches = [], count = 0, handler = null, page = null, emits = 0, settled = []; const settle = (line) => { settled.push(line); patches.push(["p",1,"text", settled.slice().sort().join(";")]); };
         globalThis.__tinyui = {
             protocol: 1,
@@ -52,7 +52,7 @@ class PageHostTest {
         };
         export const VERSION = "stub";
     """)
-    private val native = module("@tiny-ui/native", "export const NATIVE = 1;")
+    private val native = module("tinyui-native", "export const NATIVE = 1;")
     private val page = PageModule("pages/counter", module("pages/counter", "export default function Counter() { return 'page'; }"), "abcd1234")
 
     private val store = InMemoryStore().apply { set("cart", """{"n":2}""") }
@@ -128,7 +128,7 @@ class PageHostTest {
         assertEquals("abcd1234", e.buildId)
         val frame = e.frames.first()
         assertEquals("dispatch", frame.function)
-        assertEquals("@tiny-ui/core", frame.file, "engine frames name the module; stack=${e.jsStack}")
+        assertEquals("tinyui-core", frame.file, "engine frames name the module; stack=${e.jsStack}")
         assertEquals(16, frame.line)
         assertNotNull(frame.column, "bytecode compiled with --strip-source keeps columns; stack=${e.jsStack}")
         host.close()
@@ -137,7 +137,7 @@ class PageHostTest {
     @Test
     fun framesAreMappedThroughTheModuleSourceMap() = runTest {
         // generated line 16 → src/core.ts line 3 column 7: fifteen empty groups, then one segment [0, 0, 2, 6]
-        val map = SourceMaps(mapOf("@tiny-ui/core" to """{"version":3,"sources":["src/core.ts"],"mappings":";;;;;;;;;;;;;;;AAEM"}"""))
+        val map = SourceMaps(mapOf("tinyui-core" to """{"version":3,"sources":["src/core.ts"],"mappings":";;;;;;;;;;;;;;;AAEM"}"""))
         val host = host(maps = map)
         host.start()
         host.await { host.tree.root.children.isNotEmpty() }
@@ -203,14 +203,14 @@ class PageHostTest {
         val failure = assertNotNull(host.failure)
         assertEquals("E2", failure.kind)
         assertEquals(true, "render exploded" in failure.message)
-        assertEquals(true, failure.error.frames.any { it.function == "flush" && it.file == "@tiny-ui/core" }, "stack=${failure.error.jsStack}")
+        assertEquals(true, failure.error.frames.any { it.function == "flush" && it.file == "tinyui-core" }, "stack=${failure.error.jsStack}")
         assertEquals(1, errors.count { it.kind == "E2" }, "E2 goes through the sink once")
         host.close()
     }
 
     @Test
     fun protocolMismatchIsE6() = runTest {
-        val badCore = module("@tiny-ui/core", "globalThis.__tinyui = { protocol: 99 }; export const VERSION = 'x';")
+        val badCore = module("tinyui-core", "globalThis.__tinyui = { protocol: 99 }; export const VERSION = 'x';")
         val host = PageHost(RuntimeBundle(badCore, native), page, ComponentRegistry().registerBuiltins(), sink)
         host.start()
         host.await { host.failure != null }

@@ -1,5 +1,5 @@
 // docs/native-api.md §5: J3 `http.request`, errors are HostError with the E3 codes.
-import { internal } from "@tiny-ui/core";
+import { internal } from "tinyui-core";
 
 export interface HttpOptions {
     headers?: Record<string, string>;

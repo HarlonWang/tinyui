@@ -1,4 +1,4 @@
-import { VERSION } from "@tiny-ui/core";
+import { VERSION } from "tinyui-core";
 import { title } from "../lib/format.ts";
 
 interface Props { name: string }

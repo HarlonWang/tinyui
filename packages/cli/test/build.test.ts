@@ -22,12 +22,12 @@ describe("tinyui build", () => {
 
     it("names pages after their path under src/pages", () => {
         assert.deepEqual(result.pages.map((m) => m.name), ["pages/home", "pages/nested/detail"]);
-        assert.deepEqual(result.runtime.map((m) => m.name), ["@tiny-ui/core", "@tiny-ui/native"]);
+        assert.deepEqual(result.runtime.map((m) => m.name), ["tinyui-core", "tinyui-native"]);
     });
 
-    it("turns JSX into h() calls with the factory imported from @tiny-ui/core", async () => {
+    it("turns JSX into h() calls with the factory imported from tinyui-core", async () => {
         const js = await readFile(join(out, "pages", "home.js"), "utf8");
-        assert.match(js, /import \{ h, Fragment, thunk \} from "@tiny-ui\/core"/);
+        assert.match(js, /import \{ h, Fragment, thunk \} from "tinyui-core"/);
         assert.match(js, /h\(Column, null, .*h\(Text, \{ text: label \}\)/s);
         assert.match(js, /h\(Text, \{ text: thunk\(\(\) => title\(name\)\) \}\)/, "call expressions are wrapped");
         assert.doesNotMatch(js, /interface Props|: Props/, "types are erased");
@@ -39,16 +39,16 @@ describe("tinyui build", () => {
         assert.match(js, /h\(Column/);
     });
 
-    it("inlines relative imports and keeps @tiny-ui/* as bare specifiers", async () => {
+    it("inlines relative imports and keeps runtime modules as bare specifiers", async () => {
         const js = await readFile(join(out, "pages", "home.js"), "utf8");
         assert.match(js, /function title\(name\)/, "../lib/format.ts is bundled in");
         assert.doesNotMatch(js, /from "\.\.?\//, "no relative imports survive");
-        assert.match(js, /from "@tiny-ui\/core"/);
+        assert.match(js, /from "tinyui-core"/);
     });
 
     it("imports the JSX factory only from pages that use JSX", async () => {
         const js = await readFile(join(out, "pages", "nested", "detail.js"), "utf8");
-        assert.doesNotMatch(js, /@tiny-ui\/core/, "no JSX, no factory import: the runtime module does not export h yet");
+        assert.doesNotMatch(js, /tinyui-core/, "no JSX, no factory import: the runtime module does not export h yet");
     });
 
     it("keeps ES2025 syntax as is", async () => {
@@ -71,7 +71,7 @@ describe("tinyui build", () => {
     it("bundles each runtime module on its own", async () => {
         const core = await readFile(join(out, "runtime", "core.js"), "utf8");
         assert.match(core, /export \{/);
-        assert.doesNotMatch(core, /from "@tiny-ui\//);
+        assert.doesNotMatch(core, /from "tinyui-/);
     });
 
     it("rejects two sources for one page name", async () => {
@@ -88,9 +88,15 @@ describe("tinyui build", () => {
 
     it("lists everything in manifest.json", async () => {
         const manifest = JSON.parse(await readFile(result.manifest, "utf8"));
-        assert.deepEqual(manifest.runtime, ["@tiny-ui/core", "@tiny-ui/native"]);
+        assert.deepEqual(manifest.runtime, ["tinyui-core", "tinyui-native"]);
         assert.deepEqual(manifest.pages, ["pages/home", "pages/nested/detail"]);
         assert.deepEqual(Object.keys(manifest.buildIds), [...manifest.runtime, ...manifest.pages]);
+        assert.deepEqual(manifest.files, {
+            "tinyui-core": "runtime/core",
+            "tinyui-native": "runtime/native",
+            "pages/home": "pages/home",
+            "pages/nested/detail": "pages/nested/detail",
+        });
         for (const id of Object.values(manifest.buildIds)) assert.match(id as string, /^[0-9a-f]{8}$/);
         assert.equal(manifest.buildIds["pages/home"], result.pages[0]!.buildId);
     });

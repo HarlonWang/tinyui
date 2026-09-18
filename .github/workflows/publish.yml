@@ -1,0 +1,46 @@
+name: publish
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+*'
+
+# Maven only; the npm packages are published from a maintainer's machine (README「安装」)
+jobs:
+  maven:
+    runs-on: macos-15
+    timeout-minutes: 60
+    permissions:
+      contents: write   # gh release create
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: quickjs-kmp host tools (qjsc-kmp for bytecode, host JNI for Android host tests)
+        run: |
+          version=$(sed -n 's/^quickjsKmp = "\(.*\)"/\1/p' gradle/libs.versions.toml)
+          git clone --depth 1 --branch "$version" https://github.com/HarlonWang/quickjs-kmp.git "$RUNNER_TEMP/quickjs-kmp"
+          (cd "$RUNNER_TEMP/quickjs-kmp" && ./gradlew :library:buildHostTools :library:buildNativeHostJni --no-daemon)
+          echo "TINYUI_QJSC=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-tools/bin/qjsc-kmp" >> "$GITHUB_ENV"
+          echo "TINYUI_QUICKJS_HOST_JNI=$RUNNER_TEMP/quickjs-kmp/library/build/native/host-jni/lib" >> "$GITHUB_ENV"
+      - run: ./gradlew :compose:testAndroidHostTest :compose:apiCheck --no-daemon
+      - name: Publish to Maven Central
+        run: ./gradlew :compose:publishAndReleaseToMavenCentral --no-configuration-cache --no-daemon
+        env:
+          ORG_GRADLE_PROJECT_VERSION_NAME: ${{ github.ref_name }}
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_PRIVATE_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_PASSWORD }}
+      - run: gh release create "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

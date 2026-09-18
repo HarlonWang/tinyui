@@ -11,7 +11,7 @@ const card = defineComponent("pp.Card", {
 describe("schema generator", () => {
     it("types color props as ColorValue; host packages import it from core, core defines it", () => {
         const host = generateTs([card]);
-        assert.match(host, /import type \{ ColorValue, Node, Ref \} from "@tiny-ui\/core"/);
+        assert.match(host, /import type \{ ColorValue, Node, Ref \} from "tinyui-core"/);
         assert.match(host, /tint\?: ColorValue;/);
         assert.doesNotMatch(host, /export type ColorValue/);
         const core = generateTs([card], "../node.ts");
@@ -22,7 +22,7 @@ describe("schema generator", () => {
     it("groups host components under their prefix and augments the JSX namespace", () => {
         const host = generateTs([card]);
         assert.match(host, /export const pp = \{ Card: "pp\.Card" \} as const;/);
-        assert.match(host, /declare module "@tiny-ui\/core\/jsx-runtime" \{\n    namespace JSX \{\n        interface IntrinsicElements \{\n            "pp\.Card": PpCardProps;/);
+        assert.match(host, /declare module "tinyui-core\/jsx-runtime" \{\n    namespace JSX \{\n        interface IntrinsicElements \{\n            "pp\.Card": PpCardProps;/);
         assert.doesNotMatch(generateTs([card], "../node.ts"), /declare module/);
     });
 

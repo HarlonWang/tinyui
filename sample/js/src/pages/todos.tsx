@@ -1,5 +1,5 @@
-import { Button, Column, effect, For, LazyColumn, observable, ref, resource, Row, Show, Text, TextField, untrack, type LazyColumnCommands, type TextFieldCommands } from "@tiny-ui/core";
-import { http } from "@tiny-ui/native";
+import { Button, Column, effect, For, LazyColumn, observable, ref, resource, Row, Show, Text, TextField, untrack, type LazyColumnCommands, type TextFieldCommands } from "tinyui-core";
+import { http } from "tinyui-native";
 
 interface Todo { id: number; title: string; done: boolean }
 interface Page { items: Todo[]; next: number | null }
