@@ -342,7 +342,10 @@ class PageHost(
             // 0.dp is Compose's hairline (one pixel), not "no border"
             get<Dp>("borderWidth")?.takeIf { it > 0.dp }?.let { m = m.border(it, color("borderColor") ?: MaterialTheme.colorScheme.outline, shape) }
             if (clickable && has("onClick")) m = m.clickable { dispatch("onClick") }
-            get<Dp>("padding")?.let { m = m.padding(it) }
+            val all = get<Dp>("padding")
+            val h = get<Dp>("paddingHorizontal") ?: all
+            val v = get<Dp>("paddingVertical") ?: all
+            if (h != null || v != null) m = m.padding(start = h ?: 0.dp, top = v ?: 0.dp, end = h ?: 0.dp, bottom = v ?: 0.dp)
             return m
         }
 

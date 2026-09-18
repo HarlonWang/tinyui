@@ -14,6 +14,8 @@ export interface LayoutProps {
     borderWidth?: number;
     borderColor?: ColorValue;
     padding?: number;
+    paddingHorizontal?: number;
+    paddingVertical?: number;
 }
 
 export interface ColumnClickPayload {

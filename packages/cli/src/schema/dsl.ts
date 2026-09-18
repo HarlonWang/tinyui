@@ -109,4 +109,6 @@ export const LAYOUT_PROPS: Record<string, PropDef> = {
     borderWidth: dp({ doc: "drawn inside the corner radius; color defaults to the outline token" }),
     borderColor: color(),
     padding: dp({ doc: "all four sides" }),
+    paddingHorizontal: dp({ doc: "start and end; overrides padding on that axis" }),
+    paddingVertical: dp({ doc: "top and bottom; overrides padding on that axis" }),
 };
