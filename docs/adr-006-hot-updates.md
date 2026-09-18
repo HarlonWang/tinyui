@@ -1,8 +1,8 @@
 # ADR-006 · 热下发：整包原子、宿主 runtimeVersion 为兼容键、内置包是地板
 
-- 状态：已定（2026-09-18）；实现待开
-- 结论：**一次 `tinyui build` 的完整产物是一个包，整包原子生效、下次启动切换；兼容键是宿主声明的 `runtimeVersion`，引擎 commit 与 patch 协议号只做校验；内置包永远是地板，下发包失败即回退内置并拉黑；库（独立 artifact `tinyui-updates`）只做校验 / 落盘 / 选择 / 回退，不做网络、调度、UI；服务端协议是两次 GET——可变指针 + 不可变内容，指针背后是静态文件还是动态端点客户端不关心；灰度靠 manifest 里的百分比 + 客户端掷骰；回滚 = 重发上一个好包；完整性 = HTTPS + 逐文件 sha256，签名推迟**
-- 契约（manifest 字段、路径布局、客户端状态机、API 面）：[updates.md](./updates.md)
+- 状态：已定（2026-09-18；2026-09-19 修订：服务端定为开源可私有化的托管服务，签名进 MVP，客户端与服务端分仓）；实现待开
+- 结论：**一次 `tinyui build` 的完整产物是一个包，整包原子生效、下次启动切换；兼容键是宿主声明的 `runtimeVersion`，引擎 commit 与 patch 协议号只做校验；内置包永远是地板，下发包失败即回退内置并拉黑；库（独立 artifact `tinyui-updates`）只做校验 / 落盘 / 选择 / 回退，不做网络、调度、UI；服务端协议是两次 GET——可变指针 + 不可变内容，指针背后是静态文件还是动态端点客户端不关心；灰度靠 manifest 里的百分比 + 客户端掷骰；回滚 = 指针换回上一个好包；完整性 = 逐文件 sha256 + manifest 签名（ECDSA P-256，发布方持私钥）；服务端参考实现 `tinyui-updates-server` 独立开源仓、Cloudflare 为主、可私有化，托管实例 `updates.tinyui.app`**
+- 契约（manifest 字段、投递与发布协议、签名、客户端状态机、API 面）：[updates.md](./updates.md)
 - 影响：docs/README.md 首段与 ADR-005 决策表的"热下发不在本期"改为指向本文；roadmap D 组该项转入实现；build-chain.md §2 的 manifest 字段扩展
 
 ## 1. 背景
@@ -66,17 +66,36 @@ ADR-005 把热下发划出当期，条件是"内核稳定后另立 ADR"。Trendi
 | 托管 SaaS | EAS Update / App Center CodePush / Shorebird | 各绑各的客户端；CodePush 2025 已退役。排除 |
 | **两次 GET，指针与内容分离** | 客户端只 `fetch(相对路径)`：一次拿 `manifest.json`（可变，`no-store`），N 次拿 `<version>/<file>`（不可变，`immutable`） | 静态目录是最小实现，动态端点是同协议下的服务端升级，客户端不改 |
 
-选最后一种。库只定义"客户端会请求什么路径"，不定义"服务端怎么决定"——这是 §2.4 在服务端的投影。请求不带任何设备 / 版本信息；渠道（staging / production）靠 base URL，库没有 channel 概念；定向发布不做，"能不能跑"归 runtimeVersion，"想不想给"要做就 bump runtimeVersion 或宿主在自己的 `fetch` 里加 header 让服务端判，库不知情。
+选最后一种。库只定义"客户端会请求什么路径"，不定义"服务端怎么决定"——这是 §2.4 在服务端的投影。请求不带任何设备 / 版本信息；租户与渠道（staging / production）折在 base URL 里，库没有 appId / channel 概念；定向发布不做，"能不能跑"归 runtimeVersion，"想不想给"要做就 bump runtimeVersion 或宿主在自己的 `fetch` 里加 header 让服务端判，库不知情。
 
-### 2.6 灰度与回滚
+### 2.6 服务端实现放哪
+
+投递协议定了之后，服务端代码的归属是另一个问题。首批租户有两个（TrendingAI 与第二个 App），而且从第一天就是两个不同后端栈的 App。
+
+| | A 各宿主自己写路由 | B npm 包挂进宿主后端 | **C 独立服务，开源可私有化** |
+|---|---|---|---|
+| 两个租户 | 两份实现 | Java 后端挂不进 npm 包 | 各配一个 base URL |
+| 发布面 | 无，靠上传脚本 | 包里定义 | 服务定义，CLI `tinyui publish` 直连 |
+| 私有化 | — | 只能挂进 Node 后端 | 部署同一份代码到自己的 Cloudflare 账号 |
+| 挡住什么 | CLI 直发；SaaS 期两份实现要保持一致 | 包必须运行时无关 | 投递 URL 形态一经发布不能变（旧 App 版本永远打它） |
+
+选 C。独立仓 `tinyui-updates-server`，Hono（Fetch API 之上的薄路由，Workers 原生、Node / Bun / Deno 同一份代码可跑），存储只用 KV + R2——绑定越少，私有化越接近一条 `wrangler deploy`；存储收在 `Storage` 接口后，D1（触发：控制台需要跨维度查询）与文件系统 + SQLite 的 Node 适配器（触发：出现非 Cloudflare 的私有化需求）各带触发条件。管理面先不做控制台：`ADMIN_TOKEN` 作 Worker secret + CLI。静态目录自托管在协议上仍然合法，是不想跑服务的人的出口。
+
+许可证：服务端仓与主仓一致用 MIT；托管实例对外提供前重评（AGPL 能挡"拿它开托管服务"，私有化部署不受影响；单作者可对新版本换许可证）。
+
+### 2.7 仓边界：客户端在主仓，服务端独立
+
+判据是"和谁一起变、和谁一起发、谁来克隆"：`tinyui-updates` 直接依赖 core 库的 `Bundle` / `BuildManifest`，与 core 同一次 PR 改、同版本号同 tag 发 Maven，属于主仓（Gradle 模块 `updates/`）；服务端只依赖协议、push 即部署没有版本号、私有化部署者要的是克隆一个 Worker 仓而不是带 Gradle 与 Xcode 的框架仓。Expo / CodePush / Capgo / Sentry 全部是 SDK 与服务分仓。代价是协议改动要跨仓协调，用"字段只增不改、未知字段透传、规范只在 updates.md 一处"压到可忽略。否掉"新开一个仓同放客户端与服务端"：客户端离开 core 后，`Bundle` 每动一次就是一轮跨仓发版。
+
+### 2.8 灰度与回滚
 
 灰度：manifest 带 `rollout` 百分比，客户端用宿主给的稳定 `installId` 哈希落桶（CodePush 做法）。静态托管也能灰度，是"全量推坏包"这一最大风险的止血阀，v1 就做。代价是库多收一个 `installId`（宿主给，库不生成不持久化、不上传）。
 
-回滚：只有"把指针改回上一个好包"。启用规则是"≠ installed 且新于内置"而不是"新于 installed"，所以指针回退天然可行。Expo 的 `rollBackToEmbedded` 指令不做：服务端不知道每个 App 版本内置的是哪个包，多 App 版本共存时该语义本来就含糊。
+回滚：只有"把指针改回上一个好包"。启用规则是"≠ installed 且新于内置"而不是"新于 installed"，所以指针回退天然可行；服务端按 version 保存已发布的 manifest，回滚不重新上传。Expo 的 `rollBackToEmbedded` 指令不做：服务端不知道每个 App 版本内置的是哪个包，多 App 版本共存时该语义本来就含糊。
 
-### 2.7 完整性
+### 2.9 完整性与来源
 
-HTTPS + manifest 里逐文件 sha256。签名（ed25519 / 内置公钥，Expo 有）推迟：KMP 里要 expect/actual 到 `java.security` 与 `Security.framework`，触发条件是"包托管在不受自己控制的第三方"。
+逐文件 sha256 锁内容，manifest 签名锁来源。签名进 MVP 而不推迟：租户从托管实例拉可执行代码，实例对租户就是"不受自己控制的第三方"，HTTPS + sha256 过不了任何安全评审。私钥只在发布方 CI，服务端登记公钥并在发布时验签，客户端再验一次——token 被盗发不出客户端认的包，服务端被攻破发出的包客户端不认，服务永远只是搬运工。算法 ECDSA P-256 + SHA-256：Android `java.security`、iOS `Security.framework` C API 两端零依赖；ed25519 在 iOS 只有 Swift-only 的 CryptoKit，Kotlin/Native 调不到。
 
 ## 3. 决策
 
@@ -91,9 +110,10 @@ HTTPS + manifest 里逐文件 sha256。签名（ed25519 / 内置公钥，Expo �
 | 服务端协议 | 两次 GET；`<base>/<runtimeVersion>/manifest.json`（`no-store`）+ `<base>/<runtimeVersion>/<version>/…`（`immutable`）；请求不带参数；渠道靠 base URL |
 | 灰度 | manifest `rollout` 百分比，客户端按 `installId` 掷骰 |
 | 回滚 | 重发上一个好包；无 `rollBackToEmbedded` |
-| 完整性 | HTTPS + 逐文件 sha256；签名推迟 |
-| CLI | `tinyui build` 的 manifest 加 `version` / `createdAt` / `engine` / `protocol` / `hashes`；新增 `tinyui bundle --runtime-version` 产出上传目录；上传是 CI 的事 |
-| 服务端参考实现 | 不提供（连示例 Worker 都不放）；协议只有两条 GET，文档写清即可 |
+| 完整性 | 逐文件 sha256 + manifest 签名（ECDSA P-256）；发布方持私钥，服务端与客户端各验一次 |
+| CLI | `tinyui build` 的 manifest 加 `version` / `createdAt` / `engine` / `protocol` / `hashes`；`tinyui bundle --runtime-version --signing-key` 产出签名后的上传目录；`tinyui publish` 走发布协议；`keys` / `apps` / `tokens` / `releases` 子命令是全部管理面 |
+| 服务端 | 独立开源仓 `tinyui-updates-server`（MIT，托管前重评）：Hono，KV + R2，`Storage` 接口后置；托管实例 `updates.tinyui.app`，私有化 = 部署同一份代码；没有控制台 |
+| 仓边界 | `tinyui-updates` 在主仓 `updates/` 模块，与 core 同版本发；服务端独立仓；协议只写在 updates.md，字段只增不改 |
 
 ## 4. 后果
 
@@ -101,22 +121,26 @@ HTTPS + manifest 里逐文件 sha256。签名（ed25519 / 内置公钥，Expo �
 
 App Store Review Guidelines 2.5.2 只豁免由 WebKit / JavaScriptCore 执行的下载代码，QuickJS 不在名单里。React Native + Hermes 的 CodePush、字节的 Lynx 实践上未被拦，但这是"事实容忍"不是"规则允许"。F-Droid 收录政策对运行时下载并执行代码有限制（原文措辞待核对）。
 
-### 4.2 首个落点：TrendingAI
+### 4.2 首批租户
 
-后端是 Cloudflare Worker + KV（`APP_CONFIG`，`/api/app-config` 的 `min_version` 已在此）+ R2。指针放 KV（回滚 = 改一个 KV 值，与 `min_version` 同一套运营心智），文件放 R2，Worker 加一条路由 `/api/tinyui/<runtimeVersion>/…` 转发；将来要服务端灰度是同一路由加逻辑。发布由 `trendingai-tinyui` 仓 CI 完成：`tinyui bundle` → 上传 `<version>/` 内容 → 最后写指针。内置包（`pnpm sync` 提交进 TrendingAI）与下发包来自同一次 build，`version` 一致。
+TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的租户接入，各自一个 `appId`、自己的密钥对、自己 bump 的 `runtimeVersion`；宿主后端不需要任何改动，只配 base URL。发布由各自 JS 工程的 CI 完成：`tinyui bundle --signing-key` → `tinyui publish`。内置包与下发包来自同一次 build，`version` 一致（TrendingAI：`pnpm sync` 提交进 App 的那份）。
 
 ### 4.3 推迟项（记 roadmap D 组）
 
 | 项 | 触发条件 |
 |---|---|
 | 无活页时立即切换 | "第二次打开才见到更新"成为运营问题 |
-| 签名 | 包托管在不受自己控制的第三方 |
 | `rollBackToEmbedded` 指令 | 必须让所有用户立刻回内置、又没有可发的好包 |
 | 服务端定向灰度（按用户属性） | 百分比灰度不够用 |
+| 控制台 | CLI 管理面不够用（多人协作、非开发者操作回滚） |
+| 遥测（客户端上报 `Installed` / `RolledBack`，`onEvent` 的默认实现） | 控制台需要采用率与回退率 |
+| 服务端 D1 | 控制台需要跨维度查询 |
+| 非 Cloudflare 的私有化适配器（文件系统 + SQLite，Docker 镜像） | 出现非 Cloudflare 的私有化需求 |
+| 计费与计费身份（opt-in 的安装标识 header，宿主 `fetch` 加、库不知情） | 托管实例对外收费 |
 | 单页独立下发 | 两个团队要各自独立发页面 |
 | 增量传输 | 整包超过 1 MB |
 | 页内 `import()` 懒加载（接 `JsEngineConfig.moduleLoader`） | 出现单页字节码过大的页面 |
 
 ### 4.4 不变的东西
 
-ADR-001～005 不动；`PageHost` / `TinyUIPage` 签名不变；patch 协议、schema 生成链、错误上报不变；quickjs-kmp 不改（`engine` 从字节码文件头读，`QuickJs.upstreamCommit` 已有）。
+ADR-001～005 不动；`PageHost` / `TinyUIPage` 签名不变；patch 协议、schema 生成链、错误上报不变；quickjs-kmp 引擎不改（`engine` 从字节码文件头读，`QuickJs.upstreamCommit` 已有）；`qjsc-kmp` 二进制分发是构建链事项，见 roadmap D 组。

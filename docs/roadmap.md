@@ -46,8 +46,8 @@
 | 项 | 来源 | 触发条件 |
 |---|---|---|
 | ~~`createStore`（Solid 式 Proxy 深层响应式）~~ | ADR-005 | 已完成（2026-09-17，定名 `observable`，[runtime-api.md](./runtime-api.md) §2.6）：直接赋值、属性级订阅、只深代理纯对象与数组；`reconcile` / `produce` 不做，触发条件"服务端全量刷新导致整表重绑成为性能问题" |
-| ~~热下发~~ | ADR-005 | 已定（2026-09-18，[ADR-006](./adr-006-hot-updates.md) + [updates.md](./updates.md)），实现待开：CLI manifest 扩展 + `tinyui bundle`、core 库 `Bundle`、`tinyui-updates` artifact；ADR-006 §4.3 的推迟项各带触发条件 |
-| `qjsc-kmp` 宿主二进制随 quickjs-kmp tag 发 GitHub Release，CLI 按版本下载 | build-chain.md §5 | CI 现编耗时或业务方接入成为问题；属 quickjs-kmp 仓改动 |
+| ~~热下发~~ | ADR-005 | 已定（2026-09-18，[ADR-006](./adr-006-hot-updates.md) + [updates.md](./updates.md)；2026-09-19 定服务端与签名），实现待开，顺序见下方第 7 条；ADR-006 §4.3 的推迟项（控制台、遥测、D1、非 CF 适配器、计费）各带触发条件 |
+| `qjsc-kmp` 宿主二进制分发 | build-chain.md §5 | **触发已到**（2026-09-19，第二个 App 接入，其 CI 不能现编 quickjs-kmp）：形态改为 npm 平台包（`qjsc-kmp-darwin-arm64` / `-linux-x64` 等作 `tinyui-cli` 的 `optionalDependencies`，esbuild 模式）而非 GitHub Release——内网 npm 代理天然能拉；属 quickjs-kmp 仓改动，待做 |
 | App 级共享模块（业务共享代码进 external 列表与模块表） | build-chain.md §3 | 页面间重复代码让安装包体积成问题 |
 | 向 bellard/mquickjs 上报 S4 段错误 | ADR-005 §3.2 | 用户决定 |
 | `ErrorBoundary` 分支级兜底 | ADR-002 | 整页失败的比例成为问题 |
@@ -68,4 +68,5 @@
 4. ~~**M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干~~ 已完成（PR #3，2026-09-16）：`tinyui-core` 运行时（30 测试）、CLI JSX 变换（19 测试）、compose 节点表 / schema DSL / 注册表 / `PageHost` / `TinyUIPage`（9 测试），Counter 在 Android 与 iOS 模拟器上跑通。顺带修了 quickjs-kmp 的字节码注册入口不刷新栈顶的 bug（quickjs-kmp PR #12），真机需要 quickjs-kmp ≥ 0.1.1（2026-09-18 已发并 bump catalog）
 5. ~~**C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入~~ 已完成（PR #4，2026-09-16）：schema 生成链、八个内置组件、`HostServices`、`tinyui-native`；todos 页在 Android 与 iOS 模拟器上跑通输入提交、行增删改、命令滚动、分页
 6. **实战接入：TrendingAI 订阅页**（2026-09-17 起，代替多页业务样例）——页面源码在 `~/TrendingProjects/trendingai-tinyui`，产物经 `pnpm sync` 入 TrendingAI；框架缺什么以这一页为准补（第一批：主题 token、weight / border / scroll、`host.call`、`Button` children、`RadioButton`、宿主 include）。已在 Android 模拟器跑通拉价、选档、深浅色（TrendingAI 分支 `feat/tinyui-subscription`）；合入 TrendingAI main 的前提——tinyui 0.1.0（Maven + npm 三包 `tinyui-core` / `tinyui-native` / `tinyui-cli`）与 quickjs-kmp 0.1.1——已于 2026-09-18 发出（PR #11）；iOS 模拟器 smoke 通过，三条状态验证（结账失败 / 未登录 / 已是 Pro）不做
+7. **热下发实现**（ADR-006 定稿后）：CLI（manifest 扩展、`bundle` + 签名、`keys`）→ core 库 `Bundle` → `updates/` 模块 → `tinyui-updates-server` 仓 MVP（投递 + 发布 + 管理端点，部署 `updates.tinyui.app`）→ CLI `publish` / `apps` / `tokens` / `releases` → TrendingAI 接入 → 第二个 App 接入。前置：`qjsc-kmp` npm 平台包
 
