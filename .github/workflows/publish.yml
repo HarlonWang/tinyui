@@ -71,4 +71,4 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
       - run: pnpm test
-      - run: pnpm publish -r --access public --no-git-checks ${{ github.event_name == 'workflow_dispatch' && '--dry-run' || '' }}
+      - run: pnpm publish -r --access public --no-git-checks ${{ github.event_name == 'workflow_dispatch' && '--dry-run --force' || '' }}
