@@ -103,7 +103,7 @@ class LoadedPage(val runtime: RuntimeBundle, val module: PageModule, val sourceM
 class Updates(
     val embedded: Bundle,
     val runtimeVersion: String,
-    publicKey: String,                           // §7，PEM；验签失败的包不装
+    publicKey: String,                           // §7，X9.63 裸点 base64；验签失败的包不装
     dir: Path,                                   // 宿主给的目录，如 Android filesDir/tinyui、iOS Application Support/tinyui
     installId: String,                           // 稳定的安装标识；库不生成、不持久化、不上传
     fetch: suspend (path: String) -> ByteArray,  // 宿主用自己的 HTTP 栈；path 是 §2 的相对路径，库已拼好 <rv>/ 前缀，宿主只拼 base
@@ -205,8 +205,9 @@ CLI：`tinyui apps create` / `tinyui tokens create` / `tinyui tokens revoke`。�
 
 ## 7. 签名
 
-- 算法 **ECDSA P-256 + SHA-256**，签名值 DER 编码后 base64 写入 `signature`。选它而非 ed25519：两端零依赖——Android `java.security.Signature("SHA256withECDSA")`，iOS `Security.framework` 的 `SecKeyVerifySignature`（C API，Kotlin/Native 可调；ed25519 在 iOS 只有 Swift-only 的 CryptoKit）
+- 算法 **ECDSA P-256 + SHA-256**，签名值 DER 编码后 base64 写入 `signature`（Java 与 iOS 原生都出 / 收 DER；WebCrypto 是 r‖s，服务端验签前转一次，约 20 行）。选它而非 ed25519：两端零依赖——Android `java.security.Signature("SHA256withECDSA")`，iOS `Security.framework` 的 `SecKeyVerifySignature`（C API，Kotlin/Native 可调；ed25519 在 iOS 只有 Swift-only 的 CryptoKit）
 - 被签内容：manifest 去掉 `signature` 与 `rollout` 后的规范化 JSON——键按字典序、无空白、值只有字符串 / 整数 / 数组 / 对象（RFC 8785 的这个子集两端各自实现，约 30 行）。`rollout` 排除是为了服务端能改灰度比例而不碰私钥；篡改它最多改变谁拿到一个本就合法的包
-- 密钥：`tinyui keys generate` 产 PEM 私钥与公钥。私钥只在发布方 CI（`tinyui bundle --signing-key`），公钥两处登记——宿主 App 的 `Updates(publicKey)`，服务端 app 记录（§6.3）。服务端永远接触不到私钥：token 被盗发不出客户端认的包，服务端被攻破发出的包客户端不认
+- 公钥格式统一为 **X9.63 未压缩点（`04‖X‖Y`，65 字节）的 base64**：iOS `SecKeyCreateWithData` 直接收，WebCrypto `importKey("raw")` 直接收，Android 侧加固定 26 字节的 P-256 SPKI DER 头再交 `X509EncodedKeySpec`——三处都不用解析 PEM。`Updates(publicKey)`、`POST /apps` 的 `publicKey`、`keys generate` 的公钥输出都是它
+- 密钥：`tinyui keys generate` 产私钥 PEM（PKCS#8）与上述格式的公钥。私钥只在发布方 CI（`tinyui bundle --signing-key`），公钥两处登记——宿主 App 的 `Updates(publicKey)`，服务端 app 记录（§6.3）。服务端永远接触不到私钥：token 被盗发不出客户端认的包，服务端被攻破发出的包客户端不认
 - `channel` 不在被签内容里：staging 与 production 要隔离时用不同密钥对
 - 公钥轮换 = App 发版换 `publicKey` + 服务端 `PUT /apps/<id>/publicKey`；旧 App 版本仍认旧公钥，所以轮换期间要用两把私钥各发一份，或者接受旧版本不再收到更新

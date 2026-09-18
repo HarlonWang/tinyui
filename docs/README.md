@@ -44,7 +44,7 @@ JS                                   桥                          Kotlin
 | [ADR-003](./adr-003-kotlin-node-tree-and-registry.md) | Kotlin 侧节点表与组件注册 | 已定（2026-09-15） | 节点即重组单元；JS 线程直接写快照状态、主线程只重组；App 级注册表 + 清单下发；prop / event schema 写入时转换 |
 | [ADR-004](./adr-004-events-and-input-ownership.md) | 事件与输入状态归属 | 已定（2026-09-15） | 事件三分（离散 / 流式输入 / 连续），60 fps 状态留 Kotlin；新增 `x` 命令 op（ref + cmd）；文本框 initial prop + 命令 + 事件，不受控回写 |
 | [ADR-005](./adr-005-engine.md) | JS 引擎选型 | 已定（2026-09-15） | MicroQuickJS → QuickJS（ES2025，经 quickjs-kmp）；原生 ESM 必选；不降级 ES5；热下发不在本期（2026-09-18 起见 ADR-006） |
-| [ADR-006](./adr-006-hot-updates.md) | 热下发 | 已定（2026-09-18，2026-09-19 补服务端与签名） | 整包原子、下次启动生效；宿主 `runtimeVersion` 为兼容键；内置包是地板，下发页失败即回退并拉黑；`tinyui-updates` 独立 artifact 不做网络 / 调度 / UI；投递两次 GET、发布 PUT；manifest 签名 ECDSA P-256；服务端 `tinyui-updates-server` 独立开源仓、CF 为主可私有化，托管 `updates.tinyui.app`；契约见 [updates.md](./updates.md) |
+| [ADR-006](./adr-006-hot-updates.md) | 热下发 | 已定（2026-09-18，2026-09-19 补服务端与签名） | 整包原子、下次启动生效；宿主 `runtimeVersion` 为兼容键；内置包是地板，下发页失败即回退并拉黑；`tinyui-updates` 独立 artifact 不做网络 / 调度 / UI；投递两次 GET、发布 PUT；manifest 签名 ECDSA P-256；服务端 `tinyui-updates-server` 独立开源仓、CF 为主可私有化，托管 `updates.tinyui.app`；契约见 [updates.md](./updates.md)，实施计划见 [updates-plan.md](./updates-plan.md) |
 
 ## 命名
 
