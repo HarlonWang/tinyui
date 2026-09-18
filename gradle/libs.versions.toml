@@ -8,7 +8,7 @@ android-targetSdk = "37"
 androidxActivityCompose = "1.13.0"
 kotlinxCoroutines = "1.11.0"
 kotlinxSerialization = "1.11.0"
-quickjsKmp = "0.1.0"
+quickjsKmp = "0.1.1"
 vanniktechMavenPublish = "0.37.0"
 binaryCompatibilityValidator = "0.18.2"
 

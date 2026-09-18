@@ -1,4 +1,4 @@
-import { boolean, defineComponent, dp, enumOf } from "@tiny-ui/cli/schema";
+import { boolean, defineComponent, dp, enumOf } from "tinyui-cli/schema";
 
 export default defineComponent("Row", {
     doc: "Horizontal stack.",

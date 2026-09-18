@@ -241,8 +241,8 @@ li { margin-bottom: 6px; }
 <h2 id="life">4. 一个页面的一生</h2>
 <p>页面：拉一个待办列表，加载中显示占位，每行点击切换完成态。</p>
 <pre><code>// pages/todos.tsx
-import { signal, resource, Column, Row, Text, Show, For } from "@tiny-ui/core";
-import { http } from "@tiny-ui/native";
+import { signal, resource, Column, Row, Text, Show, For } from "tinyui-core";
+import { http } from "tinyui-native";
 
 interface Todo { id: number; title: string; done: boolean }
 

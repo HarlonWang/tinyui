@@ -1,4 +1,4 @@
-import { Button, Column, signal, Text } from "@tiny-ui/core";
+import { Button, Column, signal, Text } from "tinyui-core";
 
 export default function Counter() {
     const [count, setCount] = signal(0);

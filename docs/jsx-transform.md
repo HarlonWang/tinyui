@@ -2,7 +2,7 @@
 
 - 状态：已定（2026-09-16）
 - 来源：ADR-001 修订"thunk 写法改由编译器生成"、ADR-005 §4"CLI 只做 TS 擦除与 JSX → `h()`，source map"；运行时侧的接收形态见 [runtime-api.md](./runtime-api.md) §3
-- 位置：`@tiny-ui/cli` 在 esbuild 的 `onLoad` 里对每个 `.tsx` 先跑本文的 pass，再交给 esbuild 做 JSX → `h()`、TS 擦除与合并（[build-chain.md](./build-chain.md) §4.4 预留的出口）
+- 位置：`tinyui-cli` 在 esbuild 的 `onLoad` 里对每个 `.tsx` 先跑本文的 pass，再交给 esbuild 做 JSX → `h()`、TS 擦除与合并（[build-chain.md](./build-chain.md) §4.4 预留的出口）
 
 ## 1. 目标形态
 
@@ -16,7 +16,7 @@
 h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.primary), onClick: () => inc() })
 ```
 
-`thunk` 与 `h` / `Fragment` 一样由 CLI 注入 import（`@tiny-ui/core`），业务文件里不出现。类型层面 `thunk<T>(fn: () => T): T`，所以 `.d.ts` 里 prop 类型按值声明（`text: string`），业务与组件作者都看不到包装。
+`thunk` 与 `h` / `Fragment` 一样由 CLI 注入 import（`tinyui-core`），业务文件里不出现。类型层面 `thunk<T>(fn: () => T): T`，所以 `.d.ts` 里 prop 类型按值声明（`text: string`），业务与组件作者都看不到包装。
 
 ## 2. 属性表达式的包裹规则
 
@@ -64,8 +64,8 @@ h(Text, { text: thunk(() => "Count: " + count()), color: thunk(() => theme.prima
 
 ## 4. 元素类型
 
-- 小写标签 `<text>` 不支持（不是 DOM），首字母大写视为标识符：`<Text>` 变成 `h(Text, …)`，`Text` 由 `@tiny-ui/core` 导出，是值为 `"Text"` 的字符串常量（TS 允许字符串字面量类型的标识符做元素名，prop 类型从 `JSX.IntrinsicElements["Text"]` 查，由 schema 生成，roadmap C 组第 4 项）；宿主扩展 `<pp.KycCard>` 变成 `h(pp.KycCard, …)`，`pp` 由宿主 App 自己的类型包导出
-- 类型检查用 `"jsx": "react-jsx"` + `"jsxImportSource": "@tiny-ui/core"`：TS 从 `@tiny-ui/core/jsx-runtime` 取 `JSX` 命名空间，业务文件不用 import `h`；产物仍由 esbuild 按 `jsxFactory: "h"` 生成（TS 只管类型，不参与产出）
+- 小写标签 `<text>` 不支持（不是 DOM），首字母大写视为标识符：`<Text>` 变成 `h(Text, …)`，`Text` 由 `tinyui-core` 导出，是值为 `"Text"` 的字符串常量（TS 允许字符串字面量类型的标识符做元素名，prop 类型从 `JSX.IntrinsicElements["Text"]` 查，由 schema 生成，roadmap C 组第 4 项）；宿主扩展 `<pp.KycCard>` 变成 `h(pp.KycCard, …)`，`pp` 由宿主 App 自己的类型包导出
+- 类型检查用 `"jsx": "react-jsx"` + `"jsxImportSource": "tinyui-core"`：TS 从 `tinyui-core/jsx-runtime` 取 `JSX` 命名空间，业务文件不用 import `h`；产物仍由 esbuild 按 `jsxFactory: "h"` 生成（TS 只管类型，不参与产出）
 - `<>…</>` 变成 `h(Fragment, null, …)`
 - 组件 `<Row title={x()} />` 与内置元素规则相同：属性照 §2 包裹，运行时把 thunk 转成 getter 交给组件
 

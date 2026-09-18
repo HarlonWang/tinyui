@@ -1,5 +1,5 @@
 // docs/native-api.md §2; the host implements Navigator (docs/app-model.md).
-import { internal } from "@tiny-ui/core";
+import { internal } from "tinyui-core";
 
 export type Params = Record<string, string | number | boolean | null>;
 

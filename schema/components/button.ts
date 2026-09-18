@@ -1,4 +1,4 @@
-import { boolean, defineComponent, enumOf, string } from "@tiny-ui/cli/schema";
+import { boolean, defineComponent, enumOf, string } from "tinyui-cli/schema";
 
 export default defineComponent("Button", {
     doc: "Label is `text`, or the children when given (an indicator, an icon and a label…); children win.",

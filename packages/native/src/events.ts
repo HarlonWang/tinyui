@@ -1,5 +1,5 @@
 // docs/native-api.md §4: one bus for host events and business events.
-import { internal } from "@tiny-ui/core";
+import { internal } from "tinyui-core";
 
 /** J4: delivered to every page subscribed to `topic`, including native listeners. */
 export function emit(topic: string, payload: Record<string, unknown> = {}): void {

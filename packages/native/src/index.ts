@@ -5,4 +5,4 @@ export * as events from "./events.ts";
 export * as http from "./http.ts";
 export * as host from "./host.ts";
 export type { HttpResponse, HttpOptions } from "./http.ts";
-export { HostError } from "@tiny-ui/core";
+export { HostError } from "tinyui-core";

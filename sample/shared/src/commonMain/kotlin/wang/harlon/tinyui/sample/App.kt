@@ -68,8 +68,7 @@ fun App() {
         val manifest = BuildManifest.parse(Res.readBytes("files/tinyui/manifest.json").decodeToString())
         // debug builds ship the maps; without them (-Ptinyui.maps=false) stacks stay as the engine printed them
         val maps = (manifest.runtime + manifest.pages).mapNotNull { name ->
-            val file = if (name.startsWith("@tiny-ui/")) "runtime/" + name.removePrefix("@tiny-ui/") else name
-            runCatching { Res.readBytes("files/tinyui/$file.js.map").decodeToString() }.getOrNull()?.let { name to it }
+            runCatching { Res.readBytes("files/tinyui/${manifest.file(name)}.js.map").decodeToString() }.getOrNull()?.let { name to it }
         }.toMap()
         // stacks on the failure screen only when the maps came along, i.e. the same switch as -Ptinyui.maps
         TinyUI.debug = maps.isNotEmpty()

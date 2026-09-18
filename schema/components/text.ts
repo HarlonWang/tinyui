@@ -1,4 +1,4 @@
-import { color, defineComponent, enumOf, number, sp, string, TEXT_STYLES } from "@tiny-ui/cli/schema";
+import { color, defineComponent, enumOf, number, sp, string, TEXT_STYLES } from "tinyui-cli/schema";
 
 export default defineComponent("Text", {
     props: {

@@ -1,4 +1,4 @@
-import { defineComponent, dp, field } from "@tiny-ui/cli/schema";
+import { defineComponent, dp, field } from "tinyui-cli/schema";
 
 export default defineComponent("LazyColumn", {
     doc: "Virtualised vertical list; children are usually a <For>.",

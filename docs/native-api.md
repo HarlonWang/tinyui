@@ -1,8 +1,8 @@
-# `@tiny-ui/native` 与宿主服务
+# `tinyui-native` 与宿主服务
 
 - 状态：已定（2026-09-16）；M2 的实现依据
 - 来源：ADR-002 §3.1（J2 白名单、J3 / J4）、[app-model.md](./app-model.md)（路由、store、事件）、ADR-004 §3.1（连续事件阈值）
-- 两侧：JS 的 `@tiny-ui/native` 是 `__host_*` 的类型化封装；Kotlin 的 `HostServices` 是宿主 App 实现的接口组，交给 `TinyUIPage`
+- 两侧：JS 的 `tinyui-native` 是 `__host_*` 的类型化封装；Kotlin 的 `HostServices` 是宿主 App 实现的接口组，交给 `TinyUIPage`
 
 ## 1. J2 白名单
 

@@ -13,7 +13,7 @@
 | `packages/core/src/generated/components.ts` | `XxxProps`（JSX 属性类型）、`XxxYyyPayload`（事件 payload）、`XxxCommands`（命令参数表，配 `ref<XxxCommands>()`）、`IntrinsicElements`、组件名常量 | 业务的类型检查 |
 | `compose/.../components/generated/BuiltinSchemas.kt` | 每个组件一个 `ComponentSchema`，prop 的类型 / 默认值 / `required` / `initial`，事件与命令的字段表 | Kotlin 注册表：写入时转换、E5 校验、清单下发 |
 
-Kotlin 侧的 composable 仍手写，`register(BuiltinSchemas.Text) { scope -> … }`。宿主扩展组件（`pp.KycCard`）用同一套 DSL（`import … from "@tiny-ui/cli/schema"`）生成到宿主自己的包里，本仓不含。
+Kotlin 侧的 composable 仍手写，`register(BuiltinSchemas.Text) { scope -> … }`。宿主扩展组件（`pp.KycCard`）用同一套 DSL（`import … from "tinyui-cli/schema"`）生成到宿主自己的包里，本仓不含。
 
 DSL：
 

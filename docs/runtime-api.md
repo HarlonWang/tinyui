@@ -1,4 +1,4 @@
-# JS 运行时 API：`@tiny-ui/core` v1
+# JS 运行时 API：`tinyui-core` v1
 
 - 状态：已定（2026-09-16；2026-09-17 加 §2.6 `observable`、§1 命名规则，`createResource` 改名 `resource`、`host()` 改名 `manifest()`）；M1 的实现依据。系统说明见 [js-runtime.html](./js-runtime.html)，本文只放定义
 - 来源：ADR-001（Signal、所有权）、ADR-002（桥入口、事务、错误）、ADR-004（ref + cmd、事件 payload）、ADR-005（组件函数必须同步、`resource`、原生 Promise）
@@ -26,11 +26,11 @@
 | 页面 | `pageVisible()` | 页面是否可见（K1 `visible`） |
 | | `manifest()` | Kotlin 下发的组件 / 能力清单 |
 | 版本 | `VERSION`、`PROTOCOL` | 包版本；patch 协议版本号 |
-| 内部 | `internal.{call, query, send, onEmit}` | core 与 `@tiny-ui/native` 之间的桥契约（§9），业务不用 |
+| 内部 | `internal.{call, query, send, onEmit}` | core 与 `tinyui-native` 之间的桥契约（§9），业务不用 |
 
 不在 v1：`createContext`、`ErrorBoundary`、`Suspense`、`Switch/Match`、`Index`、`Portal`、`lazy`、`setInterval`。页内跨组件共享状态直接用模块顶层的 `signal` / `observable`（每页一个引擎，模块作用域就是页面作用域）。
 
-**命名规则**（2026-09-17 定）：状态与异步原语一律无前缀小写（`signal` / `memo` / `effect` / `resource` / `observable`），不用 `create*`、`use*` 前缀——`use*` 会被读成 React hooks 的"每次渲染重跑"，而组件只跑一次；组件与结构原语首字母大写。`observable` 原拟名 `createStore`（Solid），改名因 "store" 留给 `@tiny-ui/native` 的跨页 KV（业界 store 的主流含义）。
+**命名规则**（2026-09-17 定）：状态与异步原语一律无前缀小写（`signal` / `memo` / `effect` / `resource` / `observable`），不用 `create*`、`use*` 前缀——`use*` 会被读成 React hooks 的"每次渲染重跑"，而组件只跑一次；组件与结构原语首字母大写。`observable` 原拟名 `createStore`（Solid），改名因 "store" 留给 `tinyui-native` 的跨页 KV（业界 store 的主流含义）。
 
 ## 2. 响应式原语
 
@@ -99,7 +99,7 @@ function unwrap<T>(value: T): T
 - 存进去的对象被直接持有（不拷贝）：绕过 Proxy 改原对象不会触发
 - 与 `For` 的配合：`each={state.list}` 时行 accessor `item()` 返回缓存的代理，行内绑定落到属性级——改一行的一个字段只重跑读了它的绑定，`For` 不重算；`push` / `splice` 触发一次 reconcile
 - `unwrap(value)`：返回代理背后的原对象，并把嵌套的代理原地换回原对象；发请求体、打日志时用。非代理原样返回
-- 分工：原始值用 `signal`；有独立变化字段的对象 / 数组用 `observable`；跨页共享走 `@tiny-ui/native` 的 `store`（native-api.md §3）；`signal<T[]>` 整体替换仍合法。不做 `reconcile` / `produce` / 只读视图（roadmap D 组）
+- 分工：原始值用 `signal`；有独立变化字段的对象 / 数组用 `observable`；跨页共享走 `tinyui-native` 的 `store`（native-api.md §3）；`signal<T[]>` 整体替换仍合法。不做 `reconcile` / `produce` / 只读视图（roadmap D 组）
 
 ## 3. 节点与组件
 
@@ -235,7 +235,7 @@ export default function Home(props: HomeProps): Node { … }
 
 ## 9. 桥入口（运行时 ↔ Kotlin 的内部契约）
 
-业务不可见，是 `@tiny-ui/core` 与 `compose/` 之间的接口；改动两侧同一 PR。
+业务不可见，是 `tinyui-core` 与 `compose/` 之间的接口；改动两侧同一 PR。
 
 **Kotlin → JS**：运行时模块求值时挂 `globalThis.__tinyui`，Kotlin 在 K0 之后取它一次并持有。
 
@@ -264,7 +264,7 @@ export default function Home(props: HomeProps): Node { … }
 | J4 | `__host_send` | `(name: string, argsJson: string) => void` | 即发即忘 |
 | J5 | `__host_report` | `(kind: "E1", detailJson: string) => void` | 运行时捕获但不中断事务的业务错误 `{ entry, message, stack }`；`console.*` 走引擎 logger |
 
-`@tiny-ui/native` 是这五个全局的类型化封装（`http.get` = `__host_call("http.get", …)` 包成 Promise），经 core 的 `internal.{call, query, send, onEmit}` 调用；业务不直接碰 `__host_*` 也不碰 `internal`。`internal` 留在主入口而不是子路径 `@tiny-ui/core/internal`：运行时模块按名字注册进引擎的模块表，子路径会成为第三个模块名，要么再注册一个模块、要么被打进 native 的字节码而复制一份 core 的模块状态（pending 表分裂）。
+`tinyui-native` 是这五个全局的类型化封装（`http.get` = `__host_call("http.get", …)` 包成 Promise），经 core 的 `internal.{call, query, send, onEmit}` 调用；业务不直接碰 `__host_*` 也不碰 `internal`。`internal` 留在主入口而不是子路径 `tinyui-core/internal`：运行时模块按名字注册进引擎的模块表，子路径会成为第三个模块名，要么再注册一个模块、要么被打进 native 的字节码而复制一份 core 的模块状态（pending 表分裂）。
 
 错误分类的运行时侧行为（ADR-002 §3.5）：
 

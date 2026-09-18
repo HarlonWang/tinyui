@@ -1,4 +1,4 @@
-import { defineComponent, enumOf } from "@tiny-ui/cli/schema";
+import { defineComponent, enumOf } from "tinyui-cli/schema";
 
 export default defineComponent("Box", {
     doc: "Children stacked on top of each other.",

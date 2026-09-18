@@ -2,11 +2,11 @@
 
 - 状态：已完成（2026-09-16，PR #2；2026-09-17 加 §7 错误上报与 source map）；sample 在 Android 模拟器与 iOS 模拟器上显示 `tinyui:pages/home`
 - 来源：[ADR-005](./adr-005-engine.md) §4 "语言目标 / 模块" 两行的展开；roadmap A 组"构建链打通"
-- 范围：`@tiny-ui/cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、`qjsc-kmp` 二进制分发、页面级配置文件不在本期；字节码行号回映射见 §7
+- 范围：`tinyui-cli` 的 `tinyui build`、`compose/` 的 K0 加载序列、sample 的接线与 CI。自动 thunk（roadmap C 组）、`qjsc-kmp` 二进制分发、页面级配置文件不在本期；字节码行号回映射见 §7
 
 ## 1. 目标与验收
 
-`tinyui build` 把每个页面的 TSX 编成一个 ESM 模块字节码，`@tiny-ui/core` / `@tiny-ui/native` 各编成一个运行时模块字节码，App 内置这些字节码，每页一个 Runtime 按 ADR-002 K0 的顺序加载。
+`tinyui build` 把每个页面的 TSX 编成一个 ESM 模块字节码，`tinyui-core` / `tinyui-native` 各编成一个运行时模块字节码，App 内置这些字节码，每页一个 Runtime 按 ADR-002 K0 的顺序加载。
 
 验收：sample 的 `src/pages/home.tsx` 经 CLI 产出 `pages/home.bin`，Android / iOS 上 App 启动后显示页面 `default` 导出的返回值，其中含 `import.meta.url` 的值 `tinyui:pages/home`——模块名、external、注册顺序三件事一次验完。CI 的 gradle 与 pnpm 两条 job 都经过这条链。
 
@@ -14,20 +14,20 @@
 
 ```
 src/pages/home.tsx ──esbuild──▶ dist/pages/home.js + .map ──qjsc-kmp -m -n pages/home──▶ dist/pages/home.bin
-@tiny-ui/core 包入口 ──esbuild──▶ dist/runtime/core.js     ──qjsc-kmp -m -n @tiny-ui/core──▶ dist/runtime/core.bin
-@tiny-ui/native 同上（对它而言 @tiny-ui/core 是 external）
+tinyui-core 包入口 ──esbuild──▶ dist/runtime/core.js     ──qjsc-kmp -m -n tinyui-core──▶ dist/runtime/core.bin
+tinyui-native 同上（对它而言 tinyui-core 是 external）
 ```
 
 | 步骤 | 做什么 | 不做什么 |
 |---|---|---|
-| esbuild | TS 类型擦除；JSX → `h()`（`jsxFactory: "h"`，`inject` 一个内存模块自动引入 `h` / `Fragment`，页面不手写）；业务内部相对 import 合并进页面模块；`@tiny-ui/*` 在插件 `onResolve` 里标 `external` + `sideEffects: false`，保持裸说明符且未用到时整条 import 被去掉；`format: "esm"`，`target: "esnext"`；输出 source map | 任何语法降级；对 `@tiny-ui/*` 的解析 |
+| esbuild | TS 类型擦除；JSX → `h()`（`jsxFactory: "h"`，`inject` 一个内存模块自动引入 `h` / `Fragment`，页面不手写）；业务内部相对 import 合并进页面模块；`tinyui-core` / `tinyui-native` 在插件 `onResolve` 里标 `external` + `sideEffects: false`，保持裸说明符且未用到时整条 import 被去掉；`format: "esm"`，`target: "esnext"`；输出 source map | 任何语法降级；对运行时模块的解析 |
 | qjsc-kmp | 源码模块 → 字节码，`-n` 给定模块名，`--strip-source` 保留行号去源码 | 校验模块图（引擎加载时查表） |
 
-**页面名即模块名**：`src/pages/home.tsx` → `pages/home`，子目录保留路径，无后缀无前缀（ADR-005 §4）。运行时模块名固定 `@tiny-ui/core`、`@tiny-ui/native`。产物目录 `runtime/*.bin`、`pages/**/*.bin`、`manifest.json`（页面与运行时模块清单，Kotlin 侧路由表的来源，见 [app-model.md](./app-model.md)）。
+**页面名即模块名**：`src/pages/home.tsx` → `pages/home`，子目录保留路径，无后缀无前缀（ADR-005 §4）。运行时模块名固定 `tinyui-core`、`tinyui-native`，产物文件是 `runtime/core`、`runtime/native`。产物目录 `runtime/*.bin`、`pages/**/*.bin`、`manifest.json`（页面与运行时模块清单、每个模块的产物路径 `files` 与 `buildIds`；Kotlin 侧路由表的来源，宿主用 `BuildManifest.file(name)` 定位 `.bin` / `.js.map`，见 [app-model.md](./app-model.md)）。
 
-业务工程的 tsconfig 用 `jsx: "react-jsx"` + `jsxImportSource: "@tiny-ui/core"` 做类型检查（[jsx-transform.md](./jsx-transform.md) §4），而 esbuild 会读到这份 tsconfig 并按它产出 `import { jsx } from "@tiny-ui/core/jsx-runtime"`，即使 `build()` 显式传了 `jsx: "transform"`；引擎里没有这个模块，加载报 `module '@tiny-ui/core/jsx-runtime' is not registered`（2026-09-16 CI 实测）。页面构建要传 `tsconfigRaw` 覆盖 tsconfig 的 jsx 三项。
+业务工程的 tsconfig 用 `jsx: "react-jsx"` + `jsxImportSource: "tinyui-core"` 做类型检查（[jsx-transform.md](./jsx-transform.md) §4），而 esbuild 会读到这份 tsconfig 并按它产出 `import { jsx } from "tinyui-core/jsx-runtime"`，即使 `build()` 显式传了 `jsx: "transform"`；引擎里没有这个模块，加载报 `module 'tinyui-core/jsx-runtime' is not registered`（2026-09-16 CI 实测）。页面构建要传 `tsconfigRaw` 覆盖 tsconfig 的 jsx 三项。
 
-`inject` 的 import 不能只写 `external` 配置项：esbuild 对 `external` 列表里的模块一律保留 import（当作有副作用），无 JSX 的页面也会 `import { h } from "@tiny-ui/core"`，引擎链接模块时因 core 没有该导出而报 `SyntaxError`（2026-09-16 Android 模拟器实测）。走插件 `onResolve` 返回 `sideEffects: false` 才会被摇掉。
+`inject` 的 import 不能只写 `external` 配置项：esbuild 对 `external` 列表里的模块一律保留 import（当作有副作用），无 JSX 的页面也会 `import { h } from "tinyui-core"`，引擎链接模块时因 core 没有该导出而报 `SyntaxError`（2026-09-16 Android 模拟器实测）。走插件 `onResolve` 返回 `sideEffects: false` 才会被摇掉。
 
 ## 3. 页面即构建单元
 
@@ -37,7 +37,7 @@ src/pages/home.tsx ──esbuild──▶ dist/pages/home.js + .map ──qjsc-k
 
 实现上"一页一次 build()"是对产物形态的描述，不是对 esbuild 调用次数的要求：所有页面作为 `entryPoints` 放进一次 `build()`、`splitting: false`，每个入口的输出仍各自自包含，且共享解析缓存。
 
-扩展出口：业务共享代码大到安装包体积成问题时，把它编成 App 级共享模块（名字进 external 列表，与 `@tiny-ui/*` 一样注册进每个引擎的模块表），页面对它保持裸 import。这只是 external 列表与模块表多一项，管线形态不变；触发条件出现前不做。
+扩展出口：业务共享代码大到安装包体积成问题时，把它编成 App 级共享模块（名字进 external 列表，与 `tinyui-core` / `tinyui-native` 一样注册进每个引擎的模块表），页面对它保持裸 import。这只是 external 列表与模块表多一项，管线形态不变；触发条件出现前不做。
 
 ## 4. 工具选型：esbuild
 
@@ -45,7 +45,7 @@ src/pages/home.tsx ──esbuild──▶ dist/pages/home.js + .map ──qjsc-k
 
 1. TS 擦除，不做任何降级：顶层 `await`、`import.meta.url` 原样保留
 2. JSX → `h()`，工厂名可指定
-3. 打包：合并业务内部 import；`@tiny-ui/*` 不解析
+3. 打包：合并业务内部 import；运行时模块不解析
 4. ESM 单文件输出 + source map
 5. 以库形式被 CLI 调用
 

@@ -10,7 +10,7 @@
 | 仓库结构 | 已定单仓，目录见 README"仓库结构"一节 | 已定 |
 | 构建链骨架 | Gradle（build-logic / compose / sample 含 iOS 壳）+ pnpm workspace（core / native / cli）+ CI（PR 门禁 Android / host / apiCheck，iOS 全量在 ios.yml tag / 手动）；quickjs-kmp 本地 composite、CI 走 Central | 已完成（PR #1，2026-09-16） |
 | **quickjs-kmp** | 新建 SDK 接入 QuickJS（ADR-005），复制 mquickjs-kmp 骨架，API 同形；M1 shim + 三端构建，M2 句柄表 + Runtime + 微任务 + **ESM 模块表**，M3 字节码 + 宿主编译工具 + 发布。TinyUI 的 `compose/` 依赖它 | 已完成（M1～M3，`wang.harlon:quickjs-kmp:0.1.0` 2026-09-16 发 Central；桥形验收见 `bench/results/2026-09-16-quickjs-kmp.md`） |
-| 构建链打通 | CLI：TSX → `h()`（ES2025）→ 每页一个 ESM 模块字节码，`external: ["@tiny-ui/*"]`；运行时两个模块字节码内置 | 已完成（PR #2，2026-09-16；方案与踩坑见 [build-chain.md](./build-chain.md)） |
+| 构建链打通 | CLI：TSX → `h()`（ES2025）→ 每页一个 ESM 模块字节码，运行时模块 `external`；运行时两个模块字节码内置 | 已完成（PR #2，2026-09-16；方案与踩坑见 [build-chain.md](./build-chain.md)） |
 
 ## B. 验证实验（数据驱动，互相独立，可并行）
 
@@ -35,7 +35,7 @@
 | 公共布局 prop 清单与 `Modifier` 合成顺序 | ADR-003 | 已定（components.md §2） |
 | 内置组件集首批（`Column` / `Row` / `Box` / `Text` / `Image` / `Button` / `TextField` / `LazyColumn` / `Spacer`）及各自 prop / 事件 / 命令清单 | ADR-003 / 004 | 已定（components.md §3）；`Image` 推迟到图片加载管线选型 |
 | J2 白名单清单与注册方式 | ADR-002 | 已定（[native-api.md](./native-api.md) §1） |
-| `@tiny-ui/native` 的 `navigation` / `store` / `events` API 面与 `Navigator` 接口（[app-model.md](./app-model.md)）；`push` 的 Promise 糖做不做 | app-model.md | 已定（native-api.md §2–§5；Promise 糖不做） |
+| `tinyui-native` 的 `navigation` / `store` / `events` API 面与 `Navigator` 接口（[app-model.md](./app-model.md)）；`push` 的 Promise 糖做不做 | app-model.md | 已定（native-api.md §2–§5；Promise 糖不做） |
 | E3 错误 code 表、K 入口超时阈值、连续事件节流阈值 | ADR-002 / 004 | 已定（native-api.md §6） |
 | `Placeholder` 在 release 的表现 | ADR-003 | 已定（components.md §5：零尺寸空 Box） |
 | 错误上报：`PageError` 单 sink、E7 接入、栈经 source map 回映射到 `.tsx`、buildId | ADR-002 §3.5 | 已完成（2026-09-17，[build-chain.md](./build-chain.md) §7） |
@@ -65,7 +65,7 @@
 1. **A 立项骨架**——先 quickjs-kmp（M1～M3），再 TinyUI 构建链，否则 B、C 都没有落点
 2. **B 前三项并行**——半天到一天的实验，结果决定 C 里几个数值和 ADR-003 的退路
 3. **C 前三项定稿**（运行时 API、patch 协议、schema DSL）——两侧代码的契约，定了才能分头写
-4. ~~**M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干~~ 已完成（PR #3，2026-09-16）：`@tiny-ui/core` 运行时（30 测试）、CLI JSX 变换（19 测试）、compose 节点表 / schema DSL / 注册表 / `PageHost` / `TinyUIPage`（9 测试），Counter 在 Android 与 iOS 模拟器上跑通。顺带修了 quickjs-kmp 的字节码注册入口不刷新栈顶的 bug（quickjs-kmp PR #12），**真机需要 quickjs-kmp ≥ 0.1.1**，发版后 bump catalog
-5. ~~**C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入~~ 已完成（PR #4，2026-09-16）：schema 生成链、八个内置组件、`HostServices`、`@tiny-ui/native`；todos 页在 Android 与 iOS 模拟器上跑通输入提交、行增删改、命令滚动、分页
+4. ~~**M1：Counter 端到端**——一个引擎、一页、一个 `Text` + 一个 `Button`，J1 / K1 / K2 全链路跑通，验证 ADR-001～004 主干~~ 已完成（PR #3，2026-09-16）：`tinyui-core` 运行时（30 测试）、CLI JSX 变换（19 测试）、compose 节点表 / schema DSL / 注册表 / `PageHost` / `TinyUIPage`（9 测试），Counter 在 Android 与 iOS 模拟器上跑通。顺带修了 quickjs-kmp 的字节码注册入口不刷新栈顶的 bug（quickjs-kmp PR #12），**真机需要 quickjs-kmp ≥ 0.1.1**，发版后 bump catalog
+5. ~~**C 剩余项 + 内置组件集，M2：列表页**——`For` / `LazyColumn` / `TextField` / J3 网络，覆盖所有权、命令、流式输入~~ 已完成（PR #4，2026-09-16）：schema 生成链、八个内置组件、`HostServices`、`tinyui-native`；todos 页在 Android 与 iOS 模拟器上跑通输入提交、行增删改、命令滚动、分页
 6. **实战接入：TrendingAI 订阅页**（2026-09-17 起，代替多页业务样例）——页面源码在 `~/TrendingProjects/trendingai-tinyui`，产物经 `pnpm sync` 入 TrendingAI；框架缺什么以这一页为准补（第一批：主题 token、weight / border / scroll、`host.call`、`Button` children、`RadioButton`、宿主 include）。已在 Android 模拟器跑通拉价、选档、深浅色（TrendingAI 分支 `feat/tinyui-subscription`）；合入 TrendingAI main 的前提是 tinyui 0.1.0（Maven + npm）与 quickjs-kmp 0.1.1 发版
 

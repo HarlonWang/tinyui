@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { afterEach, describe, it } from "node:test";
 import { bridge } from "./host-stub.ts";
-import { Column, h, Text, thunk } from "@tiny-ui/core";
+import { Column, h, Text, thunk } from "tinyui-core";
 import { events, host, http, navigation, store } from "../src/index.ts";
 
 type Entries = { mount(page: unknown, props: string, host: string): void; unmount(): void; flush(): void; resolve(id: number, json: string): void; emit(topic: string, json: string): void };
@@ -10,7 +10,7 @@ const HOST = JSON.stringify({ components: {}, capabilities: [] });
 const drain = () => new Promise((r) => setTimeout(r, 0));
 afterEach(() => tinyui().unmount());
 
-describe("@tiny-ui/native", () => {
+describe("tinyui-native", () => {
     it("http.get is a J3 http.request that resolves through K3", async () => {
         const p = http.get<{ ok: boolean }>("/me", { timeout: 100 });
         const call = bridge.calls.at(-1)!;

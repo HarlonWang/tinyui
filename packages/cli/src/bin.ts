@@ -19,7 +19,7 @@ schema
   --entry    TS module whose default export is the component list
   --ts       write JSX prop types here
   --kt       write Kotlin schemas here (with --package, optional --object, default BuiltinSchemas)
-  --node-import  where the generated TS imports Node / Ref from (default @tiny-ui/core)
+  --node-import  where the generated TS imports Node / Ref from (default tinyui-core)
   --check    exit 1 if a target is not already up to date, write nothing
 `;
 
@@ -37,7 +37,7 @@ async function main(argv: string[]): Promise<number> {
             kt: { type: "string" },
             package: { type: "string" },
             object: { type: "string", default: "BuiltinSchemas" },
-            "node-import": { type: "string", default: "@tiny-ui/core" },
+            "node-import": { type: "string", default: "tinyui-core" },
             check: { type: "boolean", default: false },
             help: { type: "boolean", short: "h", default: false },
         },

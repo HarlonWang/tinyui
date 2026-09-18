@@ -1,4 +1,4 @@
-import { boolean, defineComponent, enumOf, field, string } from "@tiny-ui/cli/schema";
+import { boolean, defineComponent, enumOf, field, string } from "tinyui-cli/schema";
 
 export default defineComponent("TextField", {
     doc: "Text and cursor live on the Kotlin side; JS gets notified and issues commands (docs/adr-004 §3.3).",

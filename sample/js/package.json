@@ -6,10 +6,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@tiny-ui/core": "workspace:*",
-    "@tiny-ui/native": "workspace:*"
+    "tinyui-core": "workspace:*",
+    "tinyui-native": "workspace:*"
   },
   "devDependencies": {
-    "@tiny-ui/cli": "workspace:*"
+    "tinyui-cli": "workspace:*"
   }
 }

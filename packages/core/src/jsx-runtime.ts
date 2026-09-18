@@ -1,4 +1,4 @@
-// Type-check entry for `jsx: "react-jsx"` + `jsxImportSource: "@tiny-ui/core"`; the CLI still emits h() calls
+// Type-check entry for `jsx: "react-jsx"` + `jsxImportSource: "tinyui-core"`; the CLI still emits h() calls
 // (docs/jsx-transform.md). The runtime functions exist so a react-jsx transform would also work.
 import { Fragment as FragmentImpl, h, type Node, type Props } from "./node.ts";
 import type { IntrinsicElements as Generated } from "./generated/components.ts";

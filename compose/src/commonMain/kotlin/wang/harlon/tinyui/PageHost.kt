@@ -116,10 +116,10 @@ class PageHost(
                 // K0 + K1 mount under the same timeout as every other entry: a page that spins on load fails as E6
                 withTimeout(entryTimeoutMs) { runtime.withEngine {
                     registerHost(this)
-                    step("registering @tiny-ui/core") { registerModule(runtimeBundle.core) }
-                    step("registering @tiny-ui/native") { registerModule(runtimeBundle.native) }
+                    step("registering tinyui-core") { registerModule(runtimeBundle.core) }
+                    step("registering tinyui-native") { registerModule(runtimeBundle.native) }
                     // a registered module only runs on its first import; the runtime must be up before the page
-                    evaluateModule("import \"@tiny-ui/core\"; import \"@tiny-ui/native\";").close()
+                    evaluateModule("import \"tinyui-core\"; import \"tinyui-native\";").close()
                     val namespace = runBytecode(page.bytecode, ObjectTransport.REF) as JsRef
                     if (namespace.isPromise) { namespace.close(); error("page module is still pending after microtasks were drained") }
                     val self = evaluate("__tinyui", objects = ObjectTransport.REF) as JsRef

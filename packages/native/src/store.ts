@@ -1,5 +1,5 @@
 // docs/native-api.md §3: the truth lives in Kotlin; pages read snapshots and subscribe to changes.
-import { internal, signal } from "@tiny-ui/core";
+import { internal, signal } from "tinyui-core";
 
 /** J2: the current value, or undefined. */
 export function get<T = unknown>(key: string): T | undefined {
