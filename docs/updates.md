@@ -121,7 +121,18 @@ class Updates(
 | `suspend fun check(): CheckResult` | §4.3；同一实例串行，重入直接返回进行中的结果 |
 | `@Composable fun UpdatesPage(name, registry, sink, services, propsJson, modifier, error, onHost)` | 与 `TinyUIPage` 同参，内部 `current.page(name)` → `TinyUIPage`；`error` 前先走 §4.5 的回退 |
 
-`CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `RolledBack(version, error)`，给宿主打日志与埋点。
+`CheckResult`：`UpToDate` / `Installed(version)` / `Skipped(reason)` / `Failed(stage, cause)`。`UpdateEvent` 是同一组事实加 `Running` 与 `RolledBack`，给宿主打日志与埋点；宿主的分析口径会依赖它，所以字段同样只增不改：
+
+| 事件 | 何时 | 字段 |
+|---|---|---|
+| `Running` | 构造时一次 | `version`（内置或 installed 的 manifest `version`）、`source`：`EMBEDDED` / `INSTALLED` |
+| `UpToDate` | `check()` | `version` |
+| `Skipped` | `check()` | `version`、`reason`：`INCOMPATIBLE` / `FAILED_BEFORE` / `OLDER_THAN_EMBEDDED` / `ROLLOUT`；`INCOMPATIBLE` 附 `mismatch`：`ENGINE` / `PROTOCOL` / `RUNTIME_VERSION` 的集合 |
+| `Installed` | `check()` | `version` |
+| `Failed` | `check()` | `version`（manifest 解析失败时为空）、`stage`：`MANIFEST` / `SIGNATURE` / `DOWNLOAD` / `INTEGRITY` / `STORAGE`、`message` |
+| `RolledBack` | §4.5 | `version`、`page`（模块名）、`kind`（`E2` / `E6`）、`buildId`、`message` |
+
+`Running.source` 是采用率的分子，`Skipped.mismatch` 与 `Failed.stage` 是失败归因的维度，`RolledBack` 的四个字段够对回 source map；这些在库里定形，将来上报到哪里是宿主的事。
 
 ### 4.3 `check()` 状态机
 
