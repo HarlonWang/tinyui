@@ -74,10 +74,10 @@ fun App() {
         TinyUI.debug = maps.isNotEmpty()
         bundle = Bundle(
             RuntimeBundle(
-                core = Res.readBytes("files/tinyui/runtime/core.bin"),
-                native = Res.readBytes("files/tinyui/runtime/native.bin"),
+                core = Res.readBytes("files/tinyui/${manifest.file("tinyui-core")}.bin"),
+                native = Res.readBytes("files/tinyui/${manifest.file("tinyui-native")}.bin"),
             ),
-            page = PageModule("pages/todos", Res.readBytes("files/tinyui/pages/todos.bin"), manifest.buildId("pages/todos")),
+            page = PageModule("pages/todos", Res.readBytes("files/tinyui/${manifest.file("pages/todos")}.bin"), manifest.buildId("pages/todos")),
             maps = SourceMaps(maps),
         )
     }

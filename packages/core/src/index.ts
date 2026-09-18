@@ -1,4 +1,4 @@
-export const VERSION = "0.0.0";
+export const VERSION = "0.1.0";
 export { PROTOCOL, pageVisible, manifest } from "./page.ts";
 export type { HostManifest } from "./page.ts";
 export { signal, memo, effect, onCleanup, untrack } from "./reactive.ts";
