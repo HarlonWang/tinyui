@@ -20,12 +20,12 @@
 ## 2. `navigation`
 
 ```ts
-navigation.push("pages/detail", { id: 42 });   // J4 → Navigator.push(page, paramsJson)
+navigation.push("subscription/detail", { id: 42 });   // J4 → Navigator.push(page, paramsJson)；页面名含包名
 navigation.pop({ saved: true });                // J4 → Navigator.pop(resultJson)
 navigation.onResult((result, from) => …);       // 渲染期调用；K5 topic navigation.result
 ```
 
-宿主实现 `Navigator` 接口；把结果送回上一页时，宿主持有该页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `host.emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "pages/detail" }`。v1 不提供 `push` 返回 Promise 的糖。
+宿主实现 `Navigator` 接口；把结果送回上一页时，宿主持有该页的 `PageHost`（`TinyUIPage` 的 `onHost` 回调拿到），调 `host.emit("navigation.result", json)`，`json` 形如 `{ "result": …, "from": "subscription/detail" }`。v1 不提供 `push` 返回 Promise 的糖。
 
 ## 3. `store`
 

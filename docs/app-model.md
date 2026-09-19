@@ -1,6 +1,6 @@
 # 应用模型：页面是 JS 的世界，应用是 Kotlin 的世界
 
-- 状态：已对齐（2026-09-16）；API 面（`tinyui-native` 的 `navigation` / `store` / `events`）归 roadmap C 组与 J2 白名单一起定
+- 状态：已对齐（2026-09-16；2026-09-19 加多包：路由键含包名、§7 跨包约定）；API 面（`tinyui-native` 的 `navigation` / `store` / `events`）归 roadmap C 组与 J2 白名单一起定
 - 来源：ADR-002 "跨页共享状态走 Kotlin（K5 推送）"、"多页共享引擎被否：JS 全局正是隔离问题的来源"、`navigation.push` 为 J4；ADR-003 "组件注册表 App 级、不可变"
 
 ## 1. 前提
@@ -11,7 +11,7 @@ JS 侧不存在长生命周期的"应用对象"：没有 `app.tsx`、没有 `onL
 
 | 事务 | 归属 | 机制 |
 |---|---|---|
-| 路由 | Kotlin 导航栈 | 页面名 = 模块名 = 路由键（`pages/detail`）。JS `navigation.push(name, params)` 经 J4 → Kotlin 建页面作用域 → K0 加载 → K1 `__mount(props)`，params 即 props。返回 = pop = `__unmount` = 关引擎。深链由宿主解析成页面名 + 参数走同一条 push |
+| 路由 | Kotlin 导航栈 | 页面名 = 模块名 = 路由键，含包名（`subscription/detail`，[build-chain.md](./build-chain.md) §2），跨包跳转与包内跳转写法相同。JS `navigation.push(name, params)` 经 J4 → Kotlin 建页面作用域 → K0 加载 → K1 `__mount(props)`，params 即 props。返回 = pop = `__unmount` = 关引擎。深链由宿主解析成页面名 + 参数走同一条 push |
 | 应用生命周期 | 宿主事件 | 前后台、内存警告、主题、语言、登录态经 K5 `__emit(topic)` 投给每个订阅了的活页面；栈顶页额外收 K1 `__visible`。页面只有挂载、卸载、可见性三个钩子 |
 | 跨页状态 | Kotlin 内存 store | 见第 3 节 |
 | 应用级 JS 逻辑 | Kotlin，或无状态工具代码打进各页模块 | 常驻 JS 的出口是"应用级服务 Runtime"：一个不挂 UI、随 App 生命周期的引擎，页面经 Kotlin 以 JSON 与它通信，形态同 J3 / K3。v1 不做，触发条件见 roadmap D 组 |
@@ -24,7 +24,7 @@ JS 侧不存在长生命周期的"应用对象"：没有 `app.tsx`、没有 `onL
 
 | 场景 | JS 侧 | 过桥 | 到达形态 |
 |---|---|---|---|
-| 向前传参 | `navigation.push("pages/detail", {id})` | J4 | 新页 K1 `__mount(props)` |
+| 向前传参 | `navigation.push("subscription/detail", {id})` | J4 | 新页 K1 `__mount(props)` |
 | 向后回传 | `navigation.pop(result)` | J4 | 上一页收 K5 固定 topic（如 `navigation.result`） |
 | 共享状态 | `store.get(key)` / `store.set(key, v)` | J2 读，J4 写 | 真值在 Kotlin，变更经 K5 推给订阅了该 key 的页面 |
 | 事件广播 | `events.emit(topic, payload)` / `events.on(topic, fn)` | J4 | 所有订阅了该 topic 的活页面各收一次 K5 |
@@ -47,4 +47,12 @@ ADR-002 遗留的"栈深页引擎回收策略"归 Kotlin 侧路由器：栈深�
 
 ## 6. 对构建链的影响
 
-每页一份字节码正好是路由键到产物的一一映射，`tinyui build` 输出页面清单（`manifest.json`），Kotlin 侧路由表以它为来源，不两边手写。见 [build-chain.md](./build-chain.md)。
+每页一份字节码正好是路由键到产物的一一映射，`tinyui build` 输出页面清单（`manifest.json`），Kotlin 侧路由表以它为来源，不两边手写。App 挂多个包时路由表是各包 manifest 的并集，键已含包名，不会撞。见 [build-chain.md](./build-chain.md)。
+
+## 7. 多包
+
+App 由 N≥1 个包组成（[ADR-006](./adr-006-hot-updates.md) §2.10），包边界 = 所有权边界。包之间的关系与页之间的关系相同——没有直接通道、全部经 Kotlin 中转——只是多了三条约定：
+
+- **params 是团队间接口**：跨包 `navigation.push(name, params)` 的 params 契约由两个团队像管后端接口一样管版本，热下发只保证包内一致（同一次 build）
+- **store key 与 events topic 带包名前缀**：`subscription.plan`、`subscription.purchased`。总线与 store 都是 App 级的，不加前缀两个团队会撞；先作约定，由库强制的触发条件见 ADR-006 §4.3。宿主发出的系统事件（前后台、主题）不带包名
+- **不做跨包共享代码**：共用工具代码各包各编一份（build-chain.md §3）
