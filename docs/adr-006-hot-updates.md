@@ -136,11 +136,24 @@ TrendingAI 与第二个 App 都作为 `updates.tinyui.app` 的租户接入，各
 | 遥测（客户端上报 `UpdateEvent`） | 控制台需要采用率与回退率。定了做法（2026-09-19）：服务端接 eventbase（`createIngest` / `createQuery` 挂进 tinyui-updates-server，租户各一个 appKey，`active` 即采用率分母，按 props 切片先走 `POST /sql`；投递日志用 `createTracker`），协议归 eventbase 仓 `docs/protocol.md`，本仓只引用；客户端 `tinyui-updates` 不依赖 eventbase-kt，提供按该协议格式化的 `EventbaseTelemetry(send)` 适配器（`install` = `sha256(installId + appId)`，无队列），已用 eventbase-kt 的宿主直接把 `onEvent` 桥到 `track`。前置：eventbase 加租户级取数（按 appKey 作用域的 token） |
 | 服务端 D1 | 控制台需要跨维度查询；遥测立项时随 eventbase 的 migrations 到位 |
 | 非 Cloudflare 的私有化适配器（文件系统 + SQLite，Docker 镜像） | 出现非 Cloudflare 的私有化需求 |
-| 计费与计费身份（opt-in 的安装标识 header，宿主 `fetch` 加、库不知情） | 托管实例对外收费 |
+| 计费与计费身份（opt-in 的安装标识 header，宿主 `fetch` 加、库不知情） | 托管实例对外收费；业界参照见 §4.4 |
 | 单页独立下发 | 两个团队要各自独立发页面 |
 | 增量传输 | 整包超过 1 MB |
 | 页内 `import()` 懒加载（接 `JsEngineConfig.moduleLoader`） | 出现单页字节码过大的页面 |
 
-### 4.4 不变的东西
+### 4.4 计费的业界参照：Expo EAS Update（2026-09-19 抄自 expo.dev/pricing）
+
+| 档 | 月费 | 更新 MAU | 边缘带宽 | 存储 | 端到端代码签名 |
+|---|---|---|---|---|---|
+| Free | $0 | 1,000 | 100 GiB | 20 GiB | 无 |
+| Starter | $19 + 超量 | 3,000 | 100 GiB，超量 $0.10/GiB | 20 GiB，超量 $0.05/GiB | 无 |
+| Production | $199 + 超量 | 50,000 | 1 TiB | 1 TiB | 有 |
+| Enterprise | 定制 | 1,000,000+ | 40 TiB | 10 TiB | 有 |
+
+- 计费单位是 MAU（计费周期内至少下载过一次更新的用户；同一用户多次下载算 1 个；只检查不下载不算），更新次数不限。单位跟租户业务规模走、不惩罚频繁发版，也不需要客户端上传包大小之类的数据——与 §4.3"计费身份只是一个 opt-in header"的形态相容。
+- 代码签名被当作 $199 档以上的付费分层点。tinyui 把签名放进 MVP（§2.9）且服务端开源，这是相对 EAS 的差异点，不能反过来拿签名做分层。
+- Expo 同时保留免费出口：`expo-updates` 协议公开，`updates.url` 指自建服务器即可脱离 EAS（官方 `custom-expo-updates-server` 示例仓）。对应本文 §2.5 的静态目录自托管与 §2.6 的私有化部署。
+
+### 4.5 不变的东西
 
 ADR-001～005 不动；`PageHost` / `TinyUIPage` 签名不变；patch 协议、schema 生成链、错误上报不变；quickjs-kmp 引擎不改（`engine` 从字节码文件头读，`QuickJs.upstreamCommit` 已有）；`qjsc-kmp` 二进制分发是构建链事项，见 roadmap D 组。
